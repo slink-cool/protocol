@@ -11,80 +11,156 @@ describe('Protocol', () => {
   const program = anchor.workspace.Delink as Program<Delink>;
 
   test('Can create object profile', async () => {
-    // given
-    const object = Keypair.generate();
-    const [objectProfile, objectProfileBump] =
-      await PublicKey.findProgramAddress(
-        [utf8.encode('object_profile'), object.publicKey.toBuffer()],
-        program.programId,
-      );
-    // when
-    await program.methods
-      .createObjectProfile(object.publicKey)
-      .accounts({
-        objectProfile,
-        creator: provider.wallet.publicKey,
-      })
-      .rpc();
+    // given / when
+    const { objectKeypair, objectProfilePda } = await createObjectProfile();
     // then
-    const account = await program.account.objectProfile.fetch(objectProfile);
-    expect(account.objectAddress.toBase58()).toBe(object.publicKey.toBase58());
-    expect(account.bump).toBe(objectProfileBump);
+    const account = await program.account.objectProfile.fetch(objectProfilePda);
+    expect(account.objectAddress.toBase58()).toBe(
+      objectKeypair.publicKey.toBase58(),
+    );
   });
 
   test('Can create objects relation', async () => {
     // given
-    const objectA = Keypair.generate();
-    const [objectAProfile] = await PublicKey.findProgramAddress(
-      [utf8.encode('object_profile'), objectA.publicKey.toBuffer()],
-      program.programId,
-    );
-    await program.methods
-      .createObjectProfile(objectA.publicKey)
-      .accounts({
-        objectProfile: objectAProfile,
-        creator: provider.wallet.publicKey,
-      })
-      .rpc();
-    const objectB = Keypair.generate();
-    const [objectBProfile] = await PublicKey.findProgramAddress(
-      [utf8.encode('object_profile'), objectB.publicKey.toBuffer()],
-      program.programId,
-    );
-    await program.methods
-      .createObjectProfile(objectB.publicKey)
-      .accounts({
-        objectProfile: objectBProfile,
-        creator: provider.wallet.publicKey,
-      })
-      .rpc();
+    const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
+    const { objectProfilePda: objectBProfilePda } = await createObjectProfile();
     // when
-    const [objectsRelation] = await PublicKey.findProgramAddress(
+    const objectsRelationPda = await createObjectsRelation(
+      objectAProfilePda,
+      objectBProfilePda,
+    );
+    // then
+    const account = await program.account.objectsRelation.fetch(
+      objectsRelationPda,
+    );
+    expect(account.objectAProfileAddress.toBase58()).toBe(
+      objectAProfilePda.toBase58(),
+    );
+    expect(account.objectBProfileAddress.toBase58()).toBe(
+      objectBProfilePda.toBase58(),
+    );
+    expect(account.nextAttachmentIndex).toBe(0);
+  });
+
+  test('Can add single attachment to objects relation', async () => {
+    // given
+    const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
+    const { objectProfilePda: objectBProfilePda } = await createObjectProfile();
+    const objectsRelationPda = await createObjectsRelation(
+      objectAProfilePda,
+      objectBProfilePda,
+    );
+    // when
+    const objectsRelationAttachmentPda = await createAttachment(
+      objectsRelationPda,
+    );
+    const attachment = await program.account.attachment.fetch(
+      objectsRelationAttachmentPda,
+    );
+    const relationAfter = await program.account.objectsRelation.fetch(
+      objectsRelationPda,
+    );
+    // then
+    expect(attachment.index).toBe(0);
+    expect(attachment.entityAddress.toBase58()).toBe(
+      objectsRelationPda.toBase58(),
+    );
+    expect(relationAfter.nextAttachmentIndex).toBe(1);
+  });
+
+  test('Can add multiple attachments to objects relation', async () => {
+    // given
+    const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
+    const { objectProfilePda: objectBProfilePda } = await createObjectProfile();
+    const objectsRelationPda = await createObjectsRelation(
+      objectAProfilePda,
+      objectBProfilePda,
+    );
+    const objectsRelationAttachment1Pda = await createAttachment(
+      objectsRelationPda,
+    );
+    const objectsRelationAttachment2Pda = await createAttachment(
+      objectsRelationPda,
+    );
+    const attachment1 = await program.account.attachment.fetch(
+      objectsRelationAttachment1Pda,
+    );
+    const attachment2 = await program.account.attachment.fetch(
+      objectsRelationAttachment2Pda,
+    );
+    const relationAfter = await program.account.objectsRelation.fetch(
+      objectsRelationPda,
+    );
+    // then
+    expect(objectsRelationAttachment1Pda.toBase58()).not.toBe(
+      objectsRelationAttachment2Pda.toBase58(),
+    );
+    expect(attachment1.index).toBe(0);
+    expect(attachment2.index).toBe(1);
+    expect(relationAfter.nextAttachmentIndex).toBe(2);
+  });
+
+  async function createObjectProfile() {
+    const objectKeypair = Keypair.generate();
+    const [objectProfilePda] = await PublicKey.findProgramAddress(
+      [utf8.encode('object_profile'), objectKeypair.publicKey.toBuffer()],
+      program.programId,
+    );
+    await program.methods
+      .createObjectProfile(objectKeypair.publicKey)
+      .accounts({
+        objectProfile: objectProfilePda,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    return { objectKeypair, objectProfilePda };
+  }
+
+  async function createObjectsRelation(
+    objectAProfilePda: PublicKey,
+    objectBProfilePda: PublicKey,
+  ) {
+    const [objectsRelationPda] = await PublicKey.findProgramAddress(
       [
         utf8.encode('objects_relation'),
-        objectAProfile.toBytes(),
-        objectBProfile.toBytes(),
+        objectAProfilePda.toBytes(),
+        objectBProfilePda.toBytes(),
       ],
       program.programId,
     );
     await program.methods
       .createObjectsRelation()
       .accounts({
-        objectAProfile,
-        objectBProfile,
-        objectsRelation,
+        objectAProfile: objectAProfilePda,
+        objectBProfile: objectBProfilePda,
+        objectsRelation: objectsRelationPda,
         creator: provider.wallet.publicKey,
       })
       .rpc();
-    // then
-    const account = await program.account.objectsRelation.fetch(
-      objectsRelation,
+    return objectsRelationPda;
+  }
+
+  async function createAttachment(objectsRelationPda: PublicKey) {
+    const relationBefore = await program.account.objectsRelation.fetch(
+      objectsRelationPda,
     );
-    expect(account.objectAProfileAddress.toBase58()).toBe(
-      objectAProfile.toBase58(),
+    const nextAttachmentIndex = relationBefore.nextAttachmentIndex;
+    const [objectsRelationAttachmentPda] = await PublicKey.findProgramAddress(
+      [
+        utf8.encode('objects_relation_attachment'),
+        objectsRelationPda.toBuffer(),
+        new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
+      ],
+      program.programId,
     );
-    expect(account.objectBProfileAddress.toBase58()).toBe(
-      objectBProfile.toBase58(),
-    );
-  });
+    await program.methods
+      .createObjectsRelationAttachment()
+      .accounts({
+        objectsRelation: objectsRelationPda,
+        objectsRelationAttachment: objectsRelationAttachmentPda,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    return objectsRelationAttachmentPda;
+  }
 });
