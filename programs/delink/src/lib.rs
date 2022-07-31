@@ -42,6 +42,10 @@ pub struct CreateObjectProfile<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// This account is used to prove engagement between 2 parties
+/// TODO: think how to secure the initialization to proof the engagement
+/// a) This is unidirectional => both parties must create relation
+/// b) This is bidirectional => multiple signatures are needed for init transaction
 #[derive(Accounts)]
 pub struct CreateObjectsEngagement<'info> {
     #[account(
@@ -69,11 +73,14 @@ pub struct CreateObjectsEngagement<'info> {
                 object_a_profile.key().as_ref(),
                 object_b_profile.key().as_ref(),
             ],
+            constraint = signer2.key() == object_a_profile.object_address,
         bump
     )]
     pub objects_engagement: Account<'info, ObjectsEngagement>,
     #[account(mut)]
     pub creator: Signer<'info>,
+    #[account(mut)]
+    pub signer2: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
