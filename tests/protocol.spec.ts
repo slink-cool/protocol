@@ -1,66 +1,36 @@
 import * as anchor from '@project-serum/anchor';
 import { Program } from '@project-serum/anchor';
-import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
-import { Token } from '../target/types/token';
+import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
+import { Keypair, PublicKey } from '@solana/web3.js';
+import { Delink } from '../target/types/delink';
 
-describe('game', () => {
+describe('Protocol', () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.Token as Program<Token>;
+  const program = anchor.workspace.Delink as Program<Delink>;
 
-  it('Create token', async () => {
-    // Add your test here.
-    const token = Keypair.generate();
-
-    const [tokenPDA, _] = await PublicKey.findProgramAddress(
-      [anchor.utils.bytes.utf8.encode('token'), token.publicKey.toBuffer()],
-      program.programId,
-    );
-
+  test('Can create object profile', async () => {
+    // given
+    const object = Keypair.generate();
+    const [objectProfile, objectProfileBump] =
+      await PublicKey.findProgramAddress(
+        [utf8.encode('object_profile'), object.publicKey.toBuffer()],
+        program.programId,
+      );
+    console.log(objectProfileBump);
+    // when
     await program.methods
-      .create(token.publicKey)
+      .createObjectProfile(object.publicKey)
       .accounts({
-        token: tokenPDA,
-        owner: provider.wallet.publicKey,
-        createKey: token.publicKey,
-        systemProgram: SystemProgram.programId,
+        objectProfile,
+        creator: provider.wallet.publicKey,
       })
       .rpc();
-
-    let acc = await program.account.token.fetch(tokenPDA);
-    let info = await program.account.token.getAccountInfo(tokenPDA);
-    console.log(acc);
-    console.log(info);
-  });
-
-  it('Assign token to user', async () => {
-    const token = Keypair.generate();
-    const user = Keypair.generate();
-
-    const [userTokenPda, _] = await PublicKey.findProgramAddress(
-      [
-        anchor.utils.bytes.utf8.encode('user-token'),
-        provider.wallet.publicKey.toBuffer(),
-        user.publicKey.toBuffer(),
-        token.publicKey.toBuffer(),
-      ],
-      program.programId,
-    );
-
-    await program.methods
-      .createUserToken(228)
-      .accounts({
-        owner: provider.wallet.publicKey,
-        token: token.publicKey,
-        user: user.publicKey,
-        userToken: userTokenPda,
-      })
-      .rpc();
-
-    const account = await program.account.userToken.fetch(userTokenPda);
-    const info = await program.account.userToken.getAccountInfo(userTokenPda);
+    // then
+    const account = await program.account.objectProfile.fetch(objectProfile);
     console.log(account);
-    console.log(info);
+    expect(account.objectAddress.toBase58()).toBe(object.publicKey.toBase58());
+    expect(account.bump).toBe(objectProfileBump);
   });
 });
