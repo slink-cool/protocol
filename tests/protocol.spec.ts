@@ -32,7 +32,7 @@ describe('Protocol', () => {
     expect(account.bump).toBe(objectProfileBump);
   });
 
-  test('Can create objects engagement', async () => {
+  test('Can create objects relation', async () => {
     // given
     const objectA = Keypair.generate();
     const [objectAProfile] = await PublicKey.findProgramAddress(
@@ -59,26 +59,26 @@ describe('Protocol', () => {
       })
       .rpc();
     // when
-    const [objectsEngagement] = await PublicKey.findProgramAddress(
+    const [objectsRelation] = await PublicKey.findProgramAddress(
       [
-        utf8.encode('objects_engagement'),
+        utf8.encode('objects_relation'),
         objectAProfile.toBytes(),
         objectBProfile.toBytes(),
       ],
       program.programId,
     );
     await program.methods
-      .createObjectsEngagement()
+      .createObjectsRelation()
       .accounts({
         objectAProfile,
         objectBProfile,
-        objectsEngagement,
+        objectsRelation,
         creator: provider.wallet.publicKey,
       })
       .rpc();
     // then
-    const account = await program.account.objectsEngagement.fetch(
-      objectsEngagement,
+    const account = await program.account.objectsRelation.fetch(
+      objectsRelation,
     );
     expect(account.objectAProfileAddress.toBase58()).toBe(
       objectAProfile.toBase58(),

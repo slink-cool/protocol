@@ -13,11 +13,11 @@ pub mod delink {
         )
     }
 
-    pub fn create_objects_engagement(ctx: Context<CreateObjectsEngagement>) -> Result<()> {
-        ctx.accounts.objects_engagement.init(
+    pub fn create_objects_relation(ctx: Context<CreateObjectsRelation>) -> Result<()> {
+        ctx.accounts.objects_relation.init(
             ctx.accounts.object_a_profile.key(),
             ctx.accounts.object_b_profile.key(),
-            *ctx.bumps.get("objects_engagement").unwrap(),
+            *ctx.bumps.get("objects_relation").unwrap(),
         )
     }
 }
@@ -42,12 +42,12 @@ pub struct CreateObjectProfile<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// This account is used to prove engagement between 2 parties
-/// TODO: think how to secure the initialization to proof the engagement
+/// This account is used to prove relation between 2 parties
+/// TODO: think how to secure the initialization to proof the relation
 /// a) This is unidirectional => both parties must create relation
-/// b) This is bidirectional => multiple signatures are needed for init transaction
+/// b) This is bidirectional => multiple signatures are needed for init transaction, but then
 #[derive(Accounts)]
-pub struct CreateObjectsEngagement<'info> {
+pub struct CreateObjectsRelation<'info> {
     #[account(
         seeds = [
             b"object_profile",
@@ -67,20 +67,17 @@ pub struct CreateObjectsEngagement<'info> {
     #[account(
         init,
             payer = creator,
-            space = ObjectsEngagement::SIZE,
+            space = ObjectsRelation::SIZE,
             seeds = [
-                b"objects_engagement",
+                b"objects_relation",
                 object_a_profile.key().as_ref(),
                 object_b_profile.key().as_ref(),
             ],
-            constraint = signer2.key() == object_a_profile.object_address,
         bump
     )]
-    pub objects_engagement: Account<'info, ObjectsEngagement>,
+    pub objects_relation: Account<'info, ObjectsRelation>,
     #[account(mut)]
     pub creator: Signer<'info>,
-    #[account(mut)]
-    pub signer2: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -107,17 +104,19 @@ impl ObjectProfile {
 }
 
 #[account]
-pub struct ObjectsEngagement {
+pub struct ObjectsRelation {
     pub object_a_profile_address: Pubkey,
     pub object_b_profile_address: Pubkey,
+    pub attachment_index: u32,
     pub created_at: u32,
     pub bump: u8,
 }
 
-impl ObjectsEngagement {
+impl ObjectsRelation {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // object_profile_a_address
         32 +  // object_profile_b_address
+        32 +  // attachment_index
         32 +  // created_at
         1;    // bump
 
