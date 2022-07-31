@@ -1,10 +1,31 @@
 {
   "compilerOptions": {
-    "typeRoots": ["./node_modules/@types"],
-    "lib": ["es2015"],
+    // target
+    "target": "ES2019",
     "module": "commonjs",
-    "target": "es6",
+    "moduleResolution": "node",
+    // build
     "esModuleInterop": true,
+    "preserveConstEnums": true,
+    "skipLibCheck": true,
+    "importHelpers": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    // linting
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "noErrorTruncation": true,
+    "importsNotUsedAsValues": "error",
+    // sources
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "baseUrl": "./src"
   },
   "rootDir": "./src",
   "include": [

@@ -1,8 +1,8 @@
+import type { Program } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
-import { Program } from '@project-serum/anchor';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { Delink } from '../target/types/delink';
+import type { Delink } from '../target/types/delink';
 
 describe('Protocol', () => {
   const provider = anchor.AnchorProvider.env();
