@@ -12,6 +12,14 @@ pub mod delink {
             *ctx.bumps.get("object_profile").unwrap(),
         )
     }
+
+    pub fn create_objects_engagement(ctx: Context<CreateObjectsEngagement>) -> Result<()> {
+        ctx.accounts.objects_engagement.init(
+            ctx.accounts.object_a_profile.key(),
+            ctx.accounts.object_b_profile.key(),
+            *ctx.bumps.get("objects_engagement").unwrap(),
+        )
+    }
 }
 
 
@@ -19,12 +27,51 @@ pub mod delink {
 #[instruction(object_address: Pubkey)]
 pub struct CreateObjectProfile<'info> {
     #[account(
-    init,
+        init,
         payer = creator,
         space = ObjectProfile::SIZE,
-        seeds = [b"object_profile", object_address.as_ref()], bump
+        seeds = [
+            b"object_profile",
+            object_address.as_ref()
+        ],
+        bump
     )]
     pub object_profile: Account<'info, ObjectProfile>,
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CreateObjectsEngagement<'info> {
+    #[account(
+        seeds = [
+            b"object_profile",
+            object_a_profile.object_address.as_ref(),
+        ],
+        bump = object_a_profile.bump,
+    )]
+    pub object_a_profile: Account<'info, ObjectProfile>,
+    #[account(
+        seeds = [
+            b"object_profile",
+            object_b_profile.object_address.as_ref(),
+        ],
+        bump = object_b_profile.bump,
+    )]
+    pub object_b_profile: Account<'info, ObjectProfile>,
+    #[account(
+        init,
+            payer = creator,
+            space = ObjectsEngagement::SIZE,
+            seeds = [
+                b"objects_engagement",
+                object_a_profile.key().as_ref(),
+                object_b_profile.key().as_ref(),
+            ],
+        bump
+    )]
+    pub objects_engagement: Account<'info, ObjectsEngagement>,
     #[account(mut)]
     pub creator: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -46,6 +93,30 @@ impl ObjectProfile {
 
     pub fn init(&mut self, object_address: Pubkey, bump: u8) -> Result<()> {
         self.object_address = object_address;
+        self.created_at = Clock::get()?.unix_timestamp as u32;
+        self.bump = bump;
+        Ok(())
+    }
+}
+
+#[account]
+pub struct ObjectsEngagement {
+    pub object_a_profile_address: Pubkey,
+    pub object_b_profile_address: Pubkey,
+    pub created_at: u32,
+    pub bump: u8,
+}
+
+impl ObjectsEngagement {
+    pub const SIZE: usize = 8 + // discriminator
+        32 +  // object_profile_a_address
+        32 +  // object_profile_b_address
+        32 +  // created_at
+        1;    // bump
+
+    pub fn init(&mut self, object_a_profile_address: Pubkey, object_b_profile_address: Pubkey, bump: u8) -> Result<()> {
+        self.object_a_profile_address = object_a_profile_address;
+        self.object_b_profile_address = object_b_profile_address;
         self.created_at = Clock::get()?.unix_timestamp as u32;
         self.bump = bump;
         Ok(())

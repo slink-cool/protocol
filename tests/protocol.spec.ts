@@ -18,7 +18,6 @@ describe('Protocol', () => {
         [utf8.encode('object_profile'), object.publicKey.toBuffer()],
         program.programId,
       );
-    console.log(objectProfileBump);
     // when
     await program.methods
       .createObjectProfile(object.publicKey)
@@ -29,8 +28,63 @@ describe('Protocol', () => {
       .rpc();
     // then
     const account = await program.account.objectProfile.fetch(objectProfile);
-    console.log(account);
     expect(account.objectAddress.toBase58()).toBe(object.publicKey.toBase58());
     expect(account.bump).toBe(objectProfileBump);
+  });
+
+  test('Can create objects engagement', async () => {
+    // given
+    const objectA = Keypair.generate();
+    const [objectAProfile] = await PublicKey.findProgramAddress(
+      [utf8.encode('object_profile'), objectA.publicKey.toBuffer()],
+      program.programId,
+    );
+    await program.methods
+      .createObjectProfile(objectA.publicKey)
+      .accounts({
+        objectProfile: objectAProfile,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    const objectB = Keypair.generate();
+    const [objectBProfile] = await PublicKey.findProgramAddress(
+      [utf8.encode('object_profile'), objectB.publicKey.toBuffer()],
+      program.programId,
+    );
+    await program.methods
+      .createObjectProfile(objectB.publicKey)
+      .accounts({
+        objectProfile: objectBProfile,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    // when
+    const [objectsEngagement] = await PublicKey.findProgramAddress(
+      [
+        utf8.encode('objects_engagement'),
+        objectAProfile.toBytes(),
+        objectBProfile.toBytes(),
+      ],
+      program.programId,
+    );
+    await program.methods
+      .createObjectsEngagement()
+      .accounts({
+        objectAProfile,
+        objectBProfile,
+        objectsEngagement,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    // then
+    const account = await program.account.objectsEngagement.fetch(
+      objectsEngagement,
+    );
+    expect(account.objectAProfileAddress.toBase58()).toBe(
+      objectAProfile.toBase58(),
+    );
+    expect(account.objectBProfileAddress.toBase58()).toBe(
+      objectBProfile.toBase58(),
+    );
   });
 });
