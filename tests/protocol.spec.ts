@@ -20,6 +20,48 @@ describe('Protocol', () => {
     );
   });
 
+  test('Can add single attachment to profile', async () => {
+    // given
+    const { objectProfilePda } = await createObjectProfile();
+    // when
+    const profileAttachmentPda = await createObjectProfileAttachment(
+      objectProfilePda,
+    );
+    const attachmentPda = await program.account.attachment.fetch(
+      profileAttachmentPda,
+    );
+    const profileAfter = await program.account.objectProfile.fetch(
+      objectProfilePda,
+    );
+    // then
+    expect(attachmentPda.index).toBe(0);
+    expect(attachmentPda.entityAddress.toBase58()).toBe(
+      objectProfilePda.toBase58(),
+    );
+    expect(profileAfter.nextAttachmentIndex).toBe(1);
+  });
+
+  test('Can add multiple attachments to profile', async () => {
+    // given
+    const { objectProfilePda } = await createObjectProfile();
+    const attachment1Pda = await createObjectProfileAttachment(
+      objectProfilePda,
+    );
+    const attachment2Pda = await createObjectProfileAttachment(
+      objectProfilePda,
+    );
+    const attachment1 = await program.account.attachment.fetch(attachment1Pda);
+    const attachment2 = await program.account.attachment.fetch(attachment2Pda);
+    const profileAfter = await program.account.objectProfile.fetch(
+      objectProfilePda,
+    );
+    // then
+    expect(attachment1Pda.toBase58()).not.toBe(attachment2Pda.toBase58());
+    expect(attachment1.index).toBe(0);
+    expect(attachment2.index).toBe(1);
+    expect(profileAfter.nextAttachmentIndex).toBe(2);
+  });
+
   test('Can create objects relation', async () => {
     // given
     const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
@@ -51,7 +93,7 @@ describe('Protocol', () => {
       objectBProfilePda,
     );
     // when
-    const objectsRelationAttachmentPda = await createAttachment(
+    const objectsRelationAttachmentPda = await createObjectRelationAttachment(
       objectsRelationPda,
     );
     const attachment = await program.account.attachment.fetch(
@@ -76,10 +118,10 @@ describe('Protocol', () => {
       objectAProfilePda,
       objectBProfilePda,
     );
-    const objectsRelationAttachment1Pda = await createAttachment(
+    const objectsRelationAttachment1Pda = await createObjectRelationAttachment(
       objectsRelationPda,
     );
-    const objectsRelationAttachment2Pda = await createAttachment(
+    const objectsRelationAttachment2Pda = await createObjectRelationAttachment(
       objectsRelationPda,
     );
     const attachment1 = await program.account.attachment.fetch(
@@ -126,6 +168,30 @@ describe('Protocol', () => {
     return { objectKeypair, objectProfilePda };
   }
 
+  async function createObjectProfileAttachment(objectProfilePda: PublicKey) {
+    const objectProfileBefore = await program.account.objectProfile.fetch(
+      objectProfilePda,
+    );
+    const nextAttachmentIndex = objectProfileBefore.nextAttachmentIndex;
+    const [objectProfileAttachmentPda] = await PublicKey.findProgramAddress(
+      [
+        utf8.encode('object_profile_attachment'),
+        objectProfilePda.toBuffer(),
+        new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
+      ],
+      program.programId,
+    );
+    await program.methods
+      .createObjectProfileAttachment()
+      .accounts({
+        objectProfile: objectProfilePda,
+        objectProfileAttachment: objectProfileAttachmentPda,
+        creator: provider.wallet.publicKey,
+      })
+      .rpc();
+    return objectProfileAttachmentPda;
+  }
+
   async function createObjectsRelation(
     objectAProfilePda: PublicKey,
     objectBProfilePda: PublicKey,
@@ -150,7 +216,7 @@ describe('Protocol', () => {
     return objectsRelationPda;
   }
 
-  async function createAttachment(objectsRelationPda: PublicKey) {
+  async function createObjectRelationAttachment(objectsRelationPda: PublicKey) {
     const relationBefore = await program.account.objectsRelation.fetch(
       objectsRelationPda,
     );

@@ -14,6 +14,18 @@ pub mod delink {
         )
     }
 
+    pub fn create_object_profile_attachment(ctx: Context<CreateObjectProfileAttachment>) -> Result<()> {
+        let object_profile = &mut ctx.accounts.object_profile;
+        let _attachment = ctx.accounts.object_profile_attachment.init(
+            object_profile.key(),
+            ctx.accounts.creator.key(),
+            object_profile.next_attachment_index,
+            *ctx.bumps.get("object_profile_attachment").unwrap(),
+        );
+        object_profile.next_attachment_index = object_profile.next_attachment_index.checked_add(1).unwrap();
+        Ok(())
+    }
+
     pub fn create_objects_relation(ctx: Context<CreateObjectsRelation>) -> Result<()> {
         ctx.accounts.objects_relation.init(
             ctx.accounts.object_a_profile.key(),
@@ -49,6 +61,35 @@ pub struct CreateObjectProfile<'info> {
         bump
     )]
     pub object_profile: Account<'info, ObjectProfile>,
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+
+#[derive(Accounts)]
+pub struct CreateObjectProfileAttachment<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"object_profile",
+            object_profile.object_address.as_ref(),
+        ],
+        bump = object_profile.bump,
+    )]
+    pub object_profile: Account<'info, ObjectProfile>,
+    #[account(
+        init,
+        payer = creator,
+        space = Attachment::SIZE,
+        seeds = [
+            b"object_profile_attachment",
+            object_profile.key().as_ref(),
+            &object_profile.next_attachment_index.to_le_bytes()
+        ],
+        bump
+    )]
+    pub object_profile_attachment: Account<'info, Attachment>,
     #[account(mut)]
     pub creator: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -133,12 +174,14 @@ impl ObjectProfile {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // object_address
         32 +  // authority
+        8 +   // next_attachment_index
         32 +  // created_at
         1;    // bump
 
     pub fn init(&mut self, object_address: Pubkey, authority: Pubkey, bump: u8) -> Result<()> {
         self.object_address = object_address;
         self.authority = authority;
+        self.next_attachment_index = 0;
         self.created_at = Clock::get()?.unix_timestamp as u32;
         self.bump = bump;
         Ok(())
