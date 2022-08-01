@@ -1,7 +1,7 @@
 import type { Program } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import type { Delink } from '../target/types/delink';
 
 describe('Protocol', () => {
@@ -100,8 +100,18 @@ describe('Protocol', () => {
     expect(relationAfter.nextAttachmentIndex).toBe(2);
   });
 
+  async function fundKeypair(publicKey: PublicKey) {
+    const connection = program.provider.connection;
+    const airDropRequest = await connection.requestAirdrop(
+      publicKey,
+      10 * LAMPORTS_PER_SOL,
+    );
+    await connection.confirmTransaction(airDropRequest);
+  }
+
   async function createObjectProfile() {
     const objectKeypair = Keypair.generate();
+    await fundKeypair(objectKeypair.publicKey);
     const [objectProfilePda] = await PublicKey.findProgramAddress(
       [utf8.encode('object_profile'), objectKeypair.publicKey.toBuffer()],
       program.programId,
