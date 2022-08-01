@@ -9,6 +9,7 @@ pub mod delink {
     pub fn create_object_profile(ctx: Context<CreateObjectProfile>, object_address: Pubkey) -> Result<()> {
         ctx.accounts.object_profile.init(
             object_address,
+            ctx.accounts.creator.key(),
             *ctx.bumps.get("object_profile").unwrap(),
         )
     }
@@ -25,6 +26,7 @@ pub mod delink {
         let objects_relation = &mut ctx.accounts.objects_relation;
         let _attachment = ctx.accounts.objects_relation_attachment.init(
             objects_relation.key(),
+            ctx.accounts.creator.key(),
             objects_relation.next_attachment_index,
             *ctx.bumps.get("objects_relation_attachment").unwrap(),
         );
@@ -52,10 +54,6 @@ pub struct CreateObjectProfile<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// This account is used to prove relation between 2 parties
-/// TODO: think how to secure the initialization to proof the relation
-/// a) This is unidirectional => both parties must create relation
-/// b) This is bidirectional => multiple signatures are needed for init transaction, but then
 #[derive(Accounts)]
 pub struct CreateObjectsRelation<'info> {
     #[account(
@@ -125,6 +123,8 @@ pub struct CreateObjectsRelationAttachment<'info> {
 #[account]
 pub struct ObjectProfile {
     pub object_address: Pubkey,
+    pub authority: Pubkey,
+    pub next_attachment_index: u8,
     pub created_at: u32,
     pub bump: u8,
 }
@@ -132,11 +132,13 @@ pub struct ObjectProfile {
 impl ObjectProfile {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // object_address
+        32 +  // authority
         32 +  // created_at
         1;    // bump
 
-    pub fn init(&mut self, object_address: Pubkey, bump: u8) -> Result<()> {
+    pub fn init(&mut self, object_address: Pubkey, authority: Pubkey, bump: u8) -> Result<()> {
         self.object_address = object_address;
+        self.authority = authority;
         self.created_at = Clock::get()?.unix_timestamp as u32;
         self.bump = bump;
         Ok(())
@@ -174,6 +176,7 @@ impl ObjectsRelation {
 #[account]
 pub struct Attachment {
     pub entity_address: Pubkey,
+    pub created_by: Pubkey,
     pub index: u8,
     pub created_at: u32,
     pub bump: u8,
@@ -182,12 +185,14 @@ pub struct Attachment {
 impl Attachment {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // entity_address
-        8 +  // index
+        32 +  // created_by
+        8 +   // index
         32 +  // created_at
         1;    // bump
 
-    pub fn init(&mut self, entity_address: Pubkey, index: u8, bump: u8) -> Result<()> {
+    pub fn init(&mut self, entity_address: Pubkey, created_by: Pubkey, index: u8, bump: u8) -> Result<()> {
         self.entity_address = entity_address;
+        self.created_by = created_by;
         self.index = index;
         self.created_at = Clock::get()?.unix_timestamp as u32;
         self.bump = bump;
