@@ -27,11 +27,12 @@ pub mod delink {
     }
 
     pub fn create_objects_relation(ctx: Context<CreateObjectsRelation>) -> Result<()> {
-        ctx.accounts.objects_relation.init(
+        let result = ctx.accounts.objects_relation.init(
             ctx.accounts.object_a_profile.key(),
             ctx.accounts.object_b_profile.key(),
             *ctx.bumps.get("objects_relation").unwrap(),
-        )
+        );
+        result
     }
 
     pub fn create_objects_relation_attachment(ctx: Context<CreateObjectsRelationAttachment>) -> Result<()> {
@@ -45,6 +46,19 @@ pub mod delink {
         objects_relation.next_attachment_index = objects_relation.next_attachment_index.checked_add(1).unwrap();
         Ok(())
     }
+
+    pub fn create_acknowledgment(ctx: Context<CreateAcknowledgment>, _profile_address: Pubkey, attachment_index: u8) -> Result<()> {
+        let attachment = &ctx.accounts.object_profile_attachment;
+        let result = ctx.accounts.acknowledgement.init(
+            attachment.key(),
+            ctx.accounts.creator.key(),
+            attachment_index,
+            *ctx.bumps.get("acknowledgement").unwrap(),
+        );
+        Ok(())
+    }
+
+
 }
 
 #[derive(Accounts)]
@@ -160,6 +174,56 @@ pub struct CreateObjectsRelationAttachment<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+#[instruction(profile_address: Pubkey, attachment_index: u8)]
+pub struct CreateAcknowledgment<'info> {
+
+    #[account(
+        seeds = [
+            b"objects_relation",
+            objects_relation_ab.object_a_profile_address.as_ref(),
+            objects_relation_ab.object_b_profile_address.as_ref(),
+        ],
+        bump = objects_relation_ab.bump,
+    )]
+    pub objects_relation_ab: Account<'info, ObjectsRelation>,
+
+    #[account(
+        seeds = [
+            b"objects_relation",
+            objects_relation_ba.object_a_profile_address.as_ref(),
+            objects_relation_ba.object_b_profile_address.as_ref(),
+        ],
+        bump = objects_relation_ba.bump,
+    )]
+    pub objects_relation_ba: Account<'info, ObjectsRelation>,
+
+    #[account(
+        seeds = [
+            b"object_profile_attachment",
+            profile_address.as_ref(),
+            &attachment_index.to_le_bytes()
+        ],
+        bump = object_profile_attachment.bump
+    )]
+    pub object_profile_attachment: Account<'info, Attachment>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = Acknowledgment::SIZE,
+        seeds = [
+            b"acknowledgement",
+            object_profile_attachment.key().as_ref()
+        ],
+        bump
+    )]
+    pub acknowledgement: Account<'info, Acknowledgment>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
 
 #[account]
 pub struct ObjectProfile {
@@ -226,6 +290,34 @@ pub struct Attachment {
 }
 
 impl Attachment {
+    pub const SIZE: usize = 8 + // discriminator
+        32 +  // entity_address
+        32 +  // created_by
+        8 +   // index
+        32 +  // created_at
+        1;    // bump
+
+    pub fn init(&mut self, entity_address: Pubkey, created_by: Pubkey, index: u8, bump: u8) -> Result<()> {
+        self.entity_address = entity_address;
+        self.created_by = created_by;
+        self.index = index;
+        self.created_at = Clock::get()?.unix_timestamp as u32;
+        self.bump = bump;
+        Ok(())
+    }
+}
+
+
+#[account]
+pub struct Acknowledgment {
+    pub entity_address: Pubkey,
+    pub created_by: Pubkey,
+    pub index: u8,
+    pub created_at: u32,
+    pub bump: u8,
+}
+
+impl Acknowledgment {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // entity_address
         32 +  // created_by

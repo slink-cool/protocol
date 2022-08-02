@@ -142,6 +142,47 @@ describe('Protocol', () => {
     expect(relationAfter.nextAttachmentIndex).toBe(2);
   });
 
+  test('Can do attachment acknowledgement', async () => {
+    // given
+    const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
+    const { objectProfilePda: objectBProfilePda } = await createObjectProfile();
+    const objectsRelationABPda = await createObjectsRelation(
+      objectAProfilePda,
+      objectBProfilePda,
+    );
+    const objectsRelationBAPda = await createObjectsRelation(
+      objectBProfilePda,
+      objectAProfilePda,
+    );
+    // when
+    const attachmentPda = await createObjectProfileAttachment(
+      objectAProfilePda,
+    );
+    const attachment = await program.account.attachment.fetch(attachmentPda);
+    const [acknowledgementPda] = await PublicKey.findProgramAddress(
+      [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
+      program.programId,
+    );
+    await program.methods
+      .createAcknowledgment(objectAProfilePda, attachment.index)
+      .accounts({
+        objectsRelationAb: objectsRelationABPda,
+        objectsRelationBa: objectsRelationBAPda,
+        objectProfileAttachment: attachmentPda,
+        acknowledgement: acknowledgementPda,
+        creator: program.provider.publicKey,
+      })
+      .rpc();
+    const acknowledgement = await program.account.acknowledgment.fetch(
+      acknowledgementPda,
+    );
+    // then
+    expect(acknowledgement.index).toBe(0);
+    expect(acknowledgement.entityAddress.toBase58()).toBe(
+      attachmentPda.toBase58(),
+    );
+  });
+
   async function fundKeypair(publicKey: PublicKey) {
     const connection = program.provider.connection;
     const airDropRequest = await connection.requestAirdrop(
