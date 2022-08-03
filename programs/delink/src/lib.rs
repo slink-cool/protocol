@@ -31,6 +31,7 @@ pub mod delink {
         let result = ctx.accounts.objects_relation.init(
             ctx.accounts.object_a_profile.key(),
             ctx.accounts.object_b_profile.key(),
+            ctx.accounts.creator.key(),
             *ctx.bumps.get("objects_relation").unwrap(),
         );
         result
@@ -73,7 +74,8 @@ pub struct CreateObjectProfile<'info> {
             b"object_profile",
             object_address.as_ref()
         ],
-        bump
+        bump,
+        constraint = creator.key() == object_address @DelinkError::AuthorizationError,
     )]
     pub object_profile: Account<'info, ObjectProfile>,
     #[account(mut)]
@@ -91,6 +93,7 @@ pub struct CreateObjectProfileAttachment<'info> {
             object_profile.object_address.as_ref(),
         ],
         bump = object_profile.bump,
+        constraint = creator.key() == object_profile.object_address @DelinkError::AuthorizationError,
     )]
     pub object_profile: Account<'info, ObjectProfile>,
     #[account(
@@ -102,7 +105,7 @@ pub struct CreateObjectProfileAttachment<'info> {
             object_profile.key().as_ref(),
             &object_profile.next_attachment_index.to_le_bytes()
         ],
-        bump
+        bump,
     )]
     pub object_profile_attachment: Account<'info, Attachment>,
     #[account(mut)]
@@ -137,7 +140,9 @@ pub struct CreateObjectsRelation<'info> {
             object_a_profile.key().as_ref(),
             object_b_profile.key().as_ref(),
         ],
-        bump
+        bump,
+        constraint = creator.key() == object_a_profile.object_address @DelinkError::AuthorizationError,
+        constraint = object_a_profile.key() != object_b_profile.key() @DelinkError::CyclicLinkError,
     )]
     pub objects_relation: Account<'info, ObjectsRelation>,
     #[account(mut)]
@@ -155,7 +160,8 @@ pub struct CreateObjectsRelationAttachment<'info> {
             objects_relation.object_a_profile_address.as_ref(),
             objects_relation.object_b_profile_address.as_ref(),
         ],
-        bump
+        bump,
+        constraint = creator.key() == objects_relation.created_by @DelinkError::AuthorizationError,
     )]
     pub objects_relation: Account<'info, ObjectsRelation>,
     #[account(
@@ -167,7 +173,7 @@ pub struct CreateObjectsRelationAttachment<'info> {
             objects_relation.key().as_ref(),
             &objects_relation.next_attachment_index.to_le_bytes()
         ],
-        bump
+        bump,
     )]
     pub objects_relation_attachment: Account<'info, Attachment>,
     #[account(mut)]
@@ -206,11 +212,10 @@ pub struct CreateAcknowledgment<'info> {
             &attachment_index.to_le_bytes()
         ],
         bump = object_profile_attachment.bump,
-        constraint = object_profile_attachment.entity_address == profile_address @DelinkError::ProfilesNotLinkedError,
+        constraint = object_profile_attachment.entity_address == profile_address @DelinkError::AuthorizationError,
     )]
     pub object_profile_attachment: Account<'info, Attachment>,
 
-    /// TODO: update to creator.key() != object_profile_attachment.created_by
     #[account(
         init,
         payer = creator,
@@ -221,8 +226,8 @@ pub struct CreateAcknowledgment<'info> {
         ],
         bump,
         constraint = objects_relation_ac.object_b_profile_address == objects_relation_bc.object_b_profile_address @DelinkError::ProfilesNotLinkedError,
-        constraint = creator.key() == object_profile_attachment.created_by @DelinkError::ProfilesNotLinkedError,
-        constraint = objects_relation_ac.object_a_profile_address == profile_address || objects_relation_bc.object_a_profile_address == profile_address @DelinkError::ProfilesNotLinkedError,
+        constraint = creator.key() != object_profile_attachment.created_by @DelinkError::AuthorizationError,
+        constraint = objects_relation_ac.object_a_profile_address == profile_address || objects_relation_bc.object_a_profile_address == profile_address @DelinkError::AuthorizationError,
     )]
     pub acknowledgement: Account<'info, Acknowledgment>,
 
@@ -262,6 +267,7 @@ impl ObjectProfile {
 pub struct ObjectsRelation {
     pub object_a_profile_address: Pubkey,
     pub object_b_profile_address: Pubkey,
+    pub created_by: Pubkey,
     pub next_attachment_index: u8,
     pub created_at: u32,
     pub bump: u8,
@@ -271,13 +277,15 @@ impl ObjectsRelation {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // object_profile_a_address
         32 +  // object_profile_b_address
+        32 +  // created_by
         8 +  // next_attachment_index
         32 +  // created_at
         1;    // bump
 
-    pub fn init(&mut self, object_a_profile_address: Pubkey, object_b_profile_address: Pubkey, bump: u8) -> Result<()> {
+    pub fn init(&mut self, object_a_profile_address: Pubkey, object_b_profile_address: Pubkey, created_by: Pubkey, bump: u8) -> Result<()> {
         self.object_a_profile_address = object_a_profile_address;
         self.object_b_profile_address = object_b_profile_address;
+        self.created_by = created_by;
         self.next_attachment_index = 0;
         self.created_at = Clock::get()?.unix_timestamp as u32;
         self.bump = bump;
@@ -343,5 +351,7 @@ impl Acknowledgment {
 
 #[error_code]
 pub enum DelinkError {
+    AuthorizationError,
     ProfilesNotLinkedError,
+    CyclicLinkError,
 }
