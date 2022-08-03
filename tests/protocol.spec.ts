@@ -146,13 +146,15 @@ describe('Protocol', () => {
     // given
     const { objectProfilePda: objectAProfilePda } = await createObjectProfile();
     const { objectProfilePda: objectBProfilePda } = await createObjectProfile();
-    const objectsRelationABPda = await createObjectsRelation(
+    const { objectProfilePda: objectOrgProfilePda } =
+      await createObjectProfile();
+    const objectsRelationAOrgPda = await createObjectsRelation(
       objectAProfilePda,
-      objectBProfilePda,
+      objectOrgProfilePda,
     );
-    const objectsRelationBAPda = await createObjectsRelation(
+    const objectsRelationBOrgPda = await createObjectsRelation(
       objectBProfilePda,
-      objectAProfilePda,
+      objectOrgProfilePda,
     );
     // when
     const attachmentPda = await createObjectProfileAttachment(
@@ -166,8 +168,8 @@ describe('Protocol', () => {
     await program.methods
       .createAcknowledgment(objectAProfilePda, attachment.index)
       .accounts({
-        objectsRelationAb: objectsRelationABPda,
-        objectsRelationBa: objectsRelationBAPda,
+        objectsRelationAc: objectsRelationAOrgPda,
+        objectsRelationBc: objectsRelationBOrgPda,
         objectProfileAttachment: attachmentPda,
         acknowledgement: acknowledgementPda,
         creator: program.provider.publicKey,

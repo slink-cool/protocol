@@ -1,3 +1,4 @@
+
 use anchor_lang::prelude::*;
 
 declare_id!("ECcfUsei1GzLwuLhvpoXqkcBvz3VA7MdUMLwqHxiMRfR");
@@ -55,7 +56,7 @@ pub mod delink {
             attachment_index,
             *ctx.bumps.get("acknowledgement").unwrap(),
         );
-        Ok(())
+        result
     }
 
 
@@ -181,22 +182,22 @@ pub struct CreateAcknowledgment<'info> {
     #[account(
         seeds = [
             b"objects_relation",
-            objects_relation_ab.object_a_profile_address.as_ref(),
-            objects_relation_ab.object_b_profile_address.as_ref(),
+            objects_relation_ac.object_a_profile_address.as_ref(),
+            objects_relation_ac.object_b_profile_address.as_ref(),
         ],
-        bump = objects_relation_ab.bump,
+        bump = objects_relation_ac.bump,
     )]
-    pub objects_relation_ab: Account<'info, ObjectsRelation>,
+    pub objects_relation_ac: Account<'info, ObjectsRelation>,
 
     #[account(
         seeds = [
             b"objects_relation",
-            objects_relation_ba.object_a_profile_address.as_ref(),
-            objects_relation_ba.object_b_profile_address.as_ref(),
+            objects_relation_bc.object_a_profile_address.as_ref(),
+            objects_relation_bc.object_b_profile_address.as_ref(),
         ],
-        bump = objects_relation_ba.bump,
+        bump = objects_relation_bc.bump,
     )]
-    pub objects_relation_ba: Account<'info, ObjectsRelation>,
+    pub objects_relation_bc: Account<'info, ObjectsRelation>,
 
     #[account(
         seeds = [
@@ -204,10 +205,12 @@ pub struct CreateAcknowledgment<'info> {
             profile_address.as_ref(),
             &attachment_index.to_le_bytes()
         ],
-        bump = object_profile_attachment.bump
+        bump = object_profile_attachment.bump,
+        constraint = object_profile_attachment.entity_address == profile_address @DelinkError::ProfilesNotLinkedError,
     )]
     pub object_profile_attachment: Account<'info, Attachment>,
 
+    /// TODO: update to creator.key() != object_profile_attachment.created_by
     #[account(
         init,
         payer = creator,
@@ -216,7 +219,10 @@ pub struct CreateAcknowledgment<'info> {
             b"acknowledgement",
             object_profile_attachment.key().as_ref()
         ],
-        bump
+        bump,
+        constraint = objects_relation_ac.object_b_profile_address == objects_relation_bc.object_b_profile_address @DelinkError::ProfilesNotLinkedError,
+        constraint = creator.key() == object_profile_attachment.created_by @DelinkError::ProfilesNotLinkedError,
+        constraint = objects_relation_ac.object_a_profile_address == profile_address || objects_relation_bc.object_a_profile_address == profile_address @DelinkError::ProfilesNotLinkedError,
     )]
     pub acknowledgement: Account<'info, Acknowledgment>,
 
@@ -333,4 +339,9 @@ impl Acknowledgment {
         self.bump = bump;
         Ok(())
     }
+}
+
+#[error_code]
+pub enum DelinkError {
+    ProfilesNotLinkedError,
 }
