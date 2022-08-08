@@ -1,4 +1,3 @@
-
 use anchor_lang::prelude::*;
 
 declare_id!("ECcfUsei1GzLwuLhvpoXqkcBvz3VA7MdUMLwqHxiMRfR");
@@ -15,10 +14,12 @@ pub mod delink {
         )
     }
 
-    pub fn create_object_profile_attachment(ctx: Context<CreateObjectProfileAttachment>) -> Result<()> {
+    pub fn create_object_profile_attachment(ctx: Context<CreateObjectProfileAttachment>, uri: [u8; 128], sha_256_hash: [u8; 64]) -> Result<()> {
         let object_profile = &mut ctx.accounts.object_profile;
         let _attachment = ctx.accounts.object_profile_attachment.init(
             object_profile.key(),
+            uri,
+            sha_256_hash,
             ctx.accounts.creator.key(),
             object_profile.next_attachment_index,
             *ctx.bumps.get("object_profile_attachment").unwrap(),
@@ -37,10 +38,12 @@ pub mod delink {
         result
     }
 
-    pub fn create_objects_relation_attachment(ctx: Context<CreateObjectsRelationAttachment>) -> Result<()> {
+    pub fn create_objects_relation_attachment(ctx: Context<CreateObjectsRelationAttachment>, uri: [u8; 128], sha_256_hash: [u8; 64]) -> Result<()> {
         let objects_relation = &mut ctx.accounts.objects_relation;
         let _attachment = ctx.accounts.objects_relation_attachment.init(
             objects_relation.key(),
+            uri,
+            sha_256_hash,
             ctx.accounts.creator.key(),
             objects_relation.next_attachment_index,
             *ctx.bumps.get("objects_relation_attachment").unwrap(),
@@ -59,8 +62,6 @@ pub mod delink {
         );
         result
     }
-
-
 }
 
 #[derive(Accounts)]
@@ -184,7 +185,6 @@ pub struct CreateObjectsRelationAttachment<'info> {
 #[derive(Accounts)]
 #[instruction(profile_address: Pubkey, attachment_index: u8)]
 pub struct CreateAcknowledgment<'info> {
-
     #[account(
         seeds = [
             b"objects_relation",
@@ -297,6 +297,8 @@ impl ObjectsRelation {
 #[account]
 pub struct Attachment {
     pub entity_address: Pubkey,
+    pub uri: [u8; 128],
+    pub sha_256_hash: [u8; 64],
     pub created_by: Pubkey,
     pub index: u8,
     pub created_at: u32,
@@ -306,13 +308,17 @@ pub struct Attachment {
 impl Attachment {
     pub const SIZE: usize = 8 + // discriminator
         32 +  // entity_address
+        128 +  // uri
+        64 +  // sha_256_hash
         32 +  // created_by
         8 +   // index
         32 +  // created_at
         1;    // bump
 
-    pub fn init(&mut self, entity_address: Pubkey, created_by: Pubkey, index: u8, bump: u8) -> Result<()> {
+    pub fn init(&mut self, entity_address: Pubkey, uri: [u8; 128], sha_256_hash: [u8; 64], created_by: Pubkey, index: u8, bump: u8) -> Result<()> {
         self.entity_address = entity_address;
+        self.uri = uri;
+        self.sha_256_hash = sha_256_hash;
         self.created_by = created_by;
         self.index = index;
         self.created_at = Clock::get()?.unix_timestamp as u32;

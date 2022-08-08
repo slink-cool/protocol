@@ -23,10 +23,15 @@ describe('Protocol', () => {
   test('Can add single attachment to profile', async () => {
     // given
     const { objectProfilePda, objectKeypair } = await createObjectProfile();
+    const uri =
+      'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
+    const sha256 = new Uint8Array(new Array(64).fill(228));
     // when
     const profileAttachmentPda = await createObjectProfileAttachment(
       objectProfilePda,
       objectKeypair,
+      encode(uri),
+      sha256,
     );
     const attachmentPda = await program.account.attachment.fetch(
       profileAttachmentPda,
@@ -45,13 +50,20 @@ describe('Protocol', () => {
   test('Can add multiple attachments to profile', async () => {
     // given
     const { objectProfilePda, objectKeypair } = await createObjectProfile();
+    const uri =
+      'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
+    const sha256 = new Uint8Array(new Array(64).fill(228));
     const attachment1Pda = await createObjectProfileAttachment(
       objectProfilePda,
       objectKeypair,
+      encode(uri),
+      sha256,
     );
     const attachment2Pda = await createObjectProfileAttachment(
       objectProfilePda,
       objectKeypair,
+      encode(uri),
+      sha256,
     );
     const attachment1 = await program.account.attachment.fetch(attachment1Pda);
     const attachment2 = await program.account.attachment.fetch(attachment2Pda);
@@ -109,10 +121,15 @@ describe('Protocol', () => {
       objectBProfilePda,
       objectAKeypair,
     );
+    const uri =
+      'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
+    const sha256 = new Uint8Array(new Array(64).fill(228));
     // when
     const objectsRelationAttachmentPda = await createObjectRelationAttachment(
       objectsRelationPda,
       objectAKeypair,
+      encode(uri),
+      sha256,
     );
     const attachment = await program.account.attachment.fetch(
       objectsRelationAttachmentPda,
@@ -140,13 +157,20 @@ describe('Protocol', () => {
       objectBProfilePda,
       objectAKeypair,
     );
+    const uri =
+      'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
+    const sha256 = new Uint8Array(new Array(64).fill(228));
     const objectsRelationAttachment1Pda = await createObjectRelationAttachment(
       objectsRelationPda,
       objectAKeypair,
+      encode(uri),
+      sha256,
     );
     const objectsRelationAttachment2Pda = await createObjectRelationAttachment(
       objectsRelationPda,
       objectAKeypair,
+      encode(uri),
+      sha256,
     );
     const attachment1 = await program.account.attachment.fetch(
       objectsRelationAttachment1Pda,
@@ -188,12 +212,20 @@ describe('Protocol', () => {
       objectOrgProfilePda,
       objectBKeypair,
     );
+    const uri =
+      'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
+    const sha256 = new Uint8Array(new Array(64).fill(228));
     // when
     const attachmentPda = await createObjectProfileAttachment(
       objectAProfilePda,
       objectAKeypair,
+      encode(uri),
+      sha256,
     );
     const attachment = await program.account.attachment.fetch(attachmentPda);
+
+    console.log(attachment.sha256Hash);
+    console.log(decode(attachment.uri));
     const [acknowledgementPda] = await PublicKey.findProgramAddress(
       [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
       program.programId,
@@ -249,6 +281,8 @@ describe('Protocol', () => {
   async function createObjectProfileAttachment(
     objectProfilePda: PublicKey,
     objectKeypair: Keypair,
+    uri: Uint8Array,
+    sha256: Uint8Array,
   ) {
     const objectProfileBefore = await program.account.objectProfile.fetch(
       objectProfilePda,
@@ -263,7 +297,10 @@ describe('Protocol', () => {
       program.programId,
     );
     await program.methods
-      .createObjectProfileAttachment()
+      .createObjectProfileAttachment(
+        uri as unknown as number[],
+        sha256 as unknown as number[],
+      )
       .accounts({
         objectProfile: objectProfilePda,
         objectProfileAttachment: objectProfileAttachmentPda,
@@ -303,6 +340,8 @@ describe('Protocol', () => {
   async function createObjectRelationAttachment(
     objectsRelationPda: PublicKey,
     objectAKeypair: Keypair,
+    uri: Uint8Array,
+    sha256: Uint8Array,
   ) {
     const relationBefore = await program.account.objectsRelation.fetch(
       objectsRelationPda,
@@ -317,7 +356,10 @@ describe('Protocol', () => {
       program.programId,
     );
     await program.methods
-      .createObjectsRelationAttachment()
+      .createObjectsRelationAttachment(
+        uri as unknown as number[],
+        sha256 as unknown as number[],
+      )
       .accounts({
         objectsRelation: objectsRelationPda,
         objectsRelationAttachment: objectsRelationAttachmentPda,
@@ -326,5 +368,24 @@ describe('Protocol', () => {
       .signers([objectAKeypair])
       .rpc();
     return objectsRelationAttachmentPda;
+  }
+
+  function encode(s: string): Uint8Array {
+    const space = 128;
+    const maxLength = space - 1;
+    const encoded = new TextEncoder().encode(s);
+    if (encoded.length > maxLength) {
+      throw new Error();
+    }
+    const result = new Array(space).fill(0);
+    result[0] = encoded.length;
+    encoded.forEach((it, idx) => (result[idx + 1] = it));
+    return new Uint8Array(result);
+  }
+
+  function decode(s: number[]): string {
+    const length = s[0]!;
+    const data = s.slice(1, length + 1);
+    return new TextDecoder().decode(new Uint8Array(data));
   }
 });
