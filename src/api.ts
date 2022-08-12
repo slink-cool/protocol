@@ -5,16 +5,24 @@ import * as anchor from '@project-serum/anchor';
 import type { Delink } from '../target/types/delink';
 import { fundKeypair } from './utils';
 
+export async function getObjectProfilePda(
+  objectKeypair: Keypair,
+  program: Program<Delink>,
+) {
+  const [objectProfilePda] = await PublicKey.findProgramAddress(
+    [utf8.encode('object_profile'), objectKeypair.publicKey.toBuffer()],
+    program.programId,
+  );
+  return objectProfilePda;
+}
+
 export async function createObjectProfile(
   keypair: Keypair,
   program: Program<Delink>,
 ) {
   const objectKeypair = Keypair.generate();
   await fundKeypair(objectKeypair.publicKey, program.provider.connection);
-  const [objectProfilePda] = await PublicKey.findProgramAddress(
-    [utf8.encode('object_profile'), objectKeypair.publicKey.toBuffer()],
-    program.programId,
-  );
+  const objectProfilePda = await getObjectProfilePda(objectKeypair, program);
   await program.methods
     .createObjectProfile(objectKeypair.publicKey)
     .accounts({
@@ -24,6 +32,22 @@ export async function createObjectProfile(
     .signers([objectKeypair])
     .rpc();
   return { objectKeypair, objectProfilePda };
+}
+
+export async function findNextObjectProfileAttachmentPda(
+  objectProfilePda: PublicKey,
+  nextAttachmentIndex: number,
+  program: Program<Delink>,
+) {
+  const [objectProfileAttachmentPda] = await PublicKey.findProgramAddress(
+    [
+      utf8.encode('object_profile_attachment'),
+      objectProfilePda.toBuffer(),
+      new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
+    ],
+    program.programId,
+  );
+  return objectProfileAttachmentPda;
 }
 
 export async function createObjectProfileAttachment(
@@ -37,13 +61,10 @@ export async function createObjectProfileAttachment(
     objectProfilePda,
   );
   const nextAttachmentIndex = objectProfileBefore.nextAttachmentIndex;
-  const [objectProfileAttachmentPda] = await PublicKey.findProgramAddress(
-    [
-      utf8.encode('object_profile_attachment'),
-      objectProfilePda.toBuffer(),
-      new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
-    ],
-    program.programId,
+  const objectProfileAttachmentPda = await findNextObjectProfileAttachmentPda(
+    objectProfilePda,
+    nextAttachmentIndex,
+    program,
   );
   await program.methods
     .createObjectProfileAttachment(

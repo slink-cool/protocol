@@ -1,26 +1,26 @@
-export interface SaveAttachmentCommand {
-  attachment: Attachment;
+export interface SaveAttachmentCommand<T> {
+  attachment: Attachment<T>;
 }
 
-export interface Attachment {
+export interface Attachment<T> {
   name: string;
   description: string;
   type: string;
-  value: any;
+  payload: T;
 }
 
-export interface PersistedAttachment {
-  attachment: Attachment;
+export interface PersistedAttachment<T> {
+  attachment: Attachment<T>;
   metadata: AttachmentMetadata;
 }
 
 export interface AttachmentMetadata {
   uri: string;
-  sha256: string;
+  sha256: Uint8Array;
 }
 
 export interface AttachmentStorage {
-  save(command: SaveAttachmentCommand): Promise<PersistedAttachment>;
+  save<T>(command: SaveAttachmentCommand<T>): Promise<PersistedAttachment<T>>;
 
-  findOne(uri: string): Promise<PersistedAttachment>;
+  findOne<T>(uri: string): Promise<PersistedAttachment<T>>;
 }
