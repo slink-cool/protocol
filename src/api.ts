@@ -1,37 +1,32 @@
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 import type { Program } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
 import type { Delink } from '../target/types/delink';
-import { fundKeypair } from './utils';
 
 export async function getObjectProfilePda(
-  objectKeypair: Keypair,
+  object: PublicKey,
   program: Program<Delink>,
 ) {
   const [objectProfilePda] = await PublicKey.findProgramAddress(
-    [utf8.encode('object_profile'), objectKeypair.publicKey.toBuffer()],
+    [utf8.encode('object_profile'), object.toBuffer()],
     program.programId,
   );
   return objectProfilePda;
 }
 
-export async function createObjectProfile(
-  keypair: Keypair,
-  program: Program<Delink>,
-) {
-  const objectKeypair = Keypair.generate();
-  await fundKeypair(objectKeypair.publicKey, program.provider.connection);
-  const objectProfilePda = await getObjectProfilePda(objectKeypair, program);
+export async function createObjectProfile(program: Program<Delink>) {
+  const object = program.provider.publicKey!;
+  const objectProfilePda = await getObjectProfilePda(object, program);
   await program.methods
-    .createObjectProfile(objectKeypair.publicKey)
+    .createObjectProfile(object)
     .accounts({
       objectProfile: objectProfilePda,
-      creator: objectKeypair.publicKey,
+      creator: program.provider.publicKey,
     })
-    .signers([objectKeypair])
+    // .signers([objectKeypair])
     .rpc();
-  return { objectKeypair, objectProfilePda };
+  return { object, objectProfilePda };
 }
 
 export async function findNextObjectProfileAttachmentPda(
@@ -52,7 +47,6 @@ export async function findNextObjectProfileAttachmentPda(
 
 export async function createObjectProfileAttachment(
   objectProfilePda: PublicKey,
-  objectKeypair: Keypair,
   uri: Uint8Array,
   sha256: Uint8Array,
   program: Program<Delink>,
@@ -74,9 +68,8 @@ export async function createObjectProfileAttachment(
     .accounts({
       objectProfile: objectProfilePda,
       objectProfileAttachment: objectProfileAttachmentPda,
-      creator: objectKeypair.publicKey,
+      creator: program.provider.publicKey,
     })
-    .signers([objectKeypair])
     .rpc();
   return objectProfileAttachmentPda;
 }
@@ -84,7 +77,6 @@ export async function createObjectProfileAttachment(
 export async function createObjectsRelation(
   objectAProfilePda: PublicKey,
   objectBProfilePda: PublicKey,
-  objectAKeypair: Keypair,
   program: Program<Delink>,
 ) {
   const [objectsRelationPda] = await PublicKey.findProgramAddress(
@@ -101,16 +93,14 @@ export async function createObjectsRelation(
       objectAProfile: objectAProfilePda,
       objectBProfile: objectBProfilePda,
       objectsRelation: objectsRelationPda,
-      creator: objectAKeypair.publicKey,
+      creator: program.provider.publicKey,
     })
-    .signers([objectAKeypair])
     .rpc();
   return objectsRelationPda;
 }
 
 export async function createObjectRelationAttachment(
   objectsRelationPda: PublicKey,
-  objectAKeypair: Keypair,
   uri: Uint8Array,
   sha256: Uint8Array,
   program: Program<Delink>,
@@ -135,9 +125,8 @@ export async function createObjectRelationAttachment(
     .accounts({
       objectsRelation: objectsRelationPda,
       objectsRelationAttachment: objectsRelationAttachmentPda,
-      creator: objectAKeypair.publicKey,
+      creator: program.provider.publicKey,
     })
-    .signers([objectAKeypair])
     .rpc();
   return objectsRelationAttachmentPda;
 }

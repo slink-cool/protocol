@@ -631,6 +631,13 @@
   dependencies:
     buffer "~6.0.3"
 
+"@solana/wallet-adapter-base@^0.9.10":
+  version "0.9.10"
+  resolved "https://registry.yarnpkg.com/@solana/wallet-adapter-base/-/wallet-adapter-base-0.9.10.tgz#6a4b2e5218b5939fb607e263760c48cd016af0f3"
+  integrity sha512-NmNybJSoQ4jYb62lKbTIqMhAivpwwzBBrgHNQjGQlhunIusbYf3an7pyPPfeqgBKdPi4IaNA782O0g6q2tjGRQ==
+  dependencies:
+    eventemitter3 "^4.0.0"
+
 "@solana/web3.js@^1.36.0":
   version "1.48.0"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.48.0.tgz#331281b2d80640431fb3b6fdc6b704ec325917aa"
@@ -1367,7 +1374,7 @@ esprima@^4.0.0:
   resolved "https://registry.yarnpkg.com/esprima/-/esprima-4.0.1.tgz#13b04cdb3e6c5d19df91ab6987a8695619b0aa71"
   integrity sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==
 
-eventemitter3@^4.0.7:
+eventemitter3@^4.0.0, eventemitter3@^4.0.7:
   version "4.0.7"
   resolved "https://registry.yarnpkg.com/eventemitter3/-/eventemitter3-4.0.7.tgz#2de9b68f6528d5644ef5c59526a1b4a07306169f"
   integrity sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==

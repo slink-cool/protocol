@@ -1,48 +1,46 @@
-import type { Program } from '@project-serum/anchor';
 import * as anchor from '@project-serum/anchor';
-import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
+import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import type { Delink } from '../target/types/delink';
+import { IDL } from '../target/types/delink';
 import {
   createObjectProfile,
   createObjectProfileAttachment,
   createObjectRelationAttachment,
   createObjectsRelation,
 } from '../src/api';
-import { decode, encode } from '../src/utils';
+import { decode, encode, fundKeypair } from '../src/utils/utils';
+import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
+import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 
 describe('Protocol', () => {
-  const provider = anchor.AnchorProvider.env();
-  anchor.setProvider(provider);
+  const provider = AnchorProvider.env();
+  setProvider(provider);
 
-  const program = anchor.workspace.Delink as Program<Delink>;
+  const anchorProgram = anchor.workspace.Delink as Program<Delink>;
 
   test('Can create object profile', async () => {
     // given / when
-    const { objectKeypair, objectProfilePda } = await createObjectProfile(
-      Keypair.generate(),
-      program,
-    );
+    const { publicKey, program } = await createObject();
+    const { objectProfilePda } = await createObjectProfile(program);
     // then
-    const account = await program.account.objectProfile.fetch(objectProfilePda);
-    expect(account.objectAddress.toBase58()).toBe(
-      objectKeypair.publicKey.toBase58(),
+    const account = await anchorProgram.account.objectProfile.fetch(
+      objectProfilePda,
     );
+    expect(account.objectAddress.toBase58()).toBe(publicKey.toBase58());
+    expect(account.authority.toBase58()).toBe(publicKey.toBase58());
   });
 
   test('Can add single attachment to profile', async () => {
     // given
-    const { objectKeypair, objectProfilePda } = await createObjectProfile(
-      Keypair.generate(),
-      program,
-    );
+    const { program } = await createObject();
+    const { objectProfilePda } = await createObjectProfile(program);
     const uri =
       'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
     const sha256 = new Uint8Array(new Array(64).fill(228));
     // when
     const profileAttachmentPda = await createObjectProfileAttachment(
       objectProfilePda,
-      objectKeypair,
       encode(uri),
       sha256,
       program,
@@ -63,23 +61,19 @@ describe('Protocol', () => {
 
   test('Can add multiple attachments to profile', async () => {
     // given
-    const { objectProfilePda, objectKeypair } = await createObjectProfile(
-      Keypair.generate(),
-      program,
-    );
+    const { program } = await createObject();
+    const { objectProfilePda } = await createObjectProfile(program);
     const uri =
       'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
     const sha256 = new Uint8Array(new Array(64).fill(228));
     const attachment1Pda = await createObjectProfileAttachment(
       objectProfilePda,
-      objectKeypair,
       encode(uri),
       sha256,
       program,
     );
     const attachment2Pda = await createObjectProfileAttachment(
       objectProfilePda,
-      objectKeypair,
       encode(uri),
       sha256,
       program,
@@ -98,49 +92,47 @@ describe('Protocol', () => {
 
   test('Can create objects relation', async () => {
     // given
-    const {
-      objectProfilePda: objectAProfilePda,
-      objectKeypair: objectAKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
-    const {
-      objectProfilePda: objectBProfilePda,
-      objectKeypair: objectBKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
+    const { program: object1Program } = await createObject();
+    const { objectProfilePda: object1ProfilePda } = await createObjectProfile(
+      object1Program,
+    );
+    const { program: object2Program } = await createObject();
+    const { objectProfilePda: object2ProfilePda } = await createObjectProfile(
+      object2Program,
+    );
     // when
     const objectsRelationPda = await createObjectsRelation(
-      objectAProfilePda,
-      objectBProfilePda,
-      objectAKeypair,
-      program,
+      object1ProfilePda,
+      object2ProfilePda,
+      object1Program,
     );
     // then
-    const account = await program.account.objectsRelation.fetch(
+    const account = await object1Program.account.objectsRelation.fetch(
       objectsRelationPda,
     );
     expect(account.objectAProfileAddress.toBase58()).toBe(
-      objectAProfilePda.toBase58(),
+      object1ProfilePda.toBase58(),
     );
     expect(account.objectBProfileAddress.toBase58()).toBe(
-      objectBProfilePda.toBase58(),
+      object2ProfilePda.toBase58(),
     );
     expect(account.nextAttachmentIndex).toBe(0);
   });
 
   test('Can add single attachment to objects relation', async () => {
     // given
-    const {
-      objectProfilePda: objectAProfilePda,
-      objectKeypair: objectAKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
-    const {
-      objectProfilePda: objectBProfilePda,
-      objectKeypair: objectBKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
+    const { program: object1Program } = await createObject();
+    const { objectProfilePda: object1ProfilePda } = await createObjectProfile(
+      object1Program,
+    );
+    const { program: object2Program } = await createObject();
+    const { objectProfilePda: object2ProfilePda } = await createObjectProfile(
+      object2Program,
+    );
     const objectsRelationPda = await createObjectsRelation(
-      objectAProfilePda,
-      objectBProfilePda,
-      objectAKeypair,
-      program,
+      object1ProfilePda,
+      object2ProfilePda,
+      object1Program,
     );
     const uri =
       'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
@@ -148,15 +140,14 @@ describe('Protocol', () => {
     // when
     const objectsRelationAttachmentPda = await createObjectRelationAttachment(
       objectsRelationPda,
-      objectAKeypair,
       encode(uri),
       sha256,
-      program,
+      object1Program,
     );
-    const attachment = await program.account.attachment.fetch(
+    const attachment = await object1Program.account.attachment.fetch(
       objectsRelationAttachmentPda,
     );
-    const relationAfter = await program.account.objectsRelation.fetch(
+    const relationAfter = await object1Program.account.objectsRelation.fetch(
       objectsRelationPda,
     );
     // then
@@ -169,44 +160,41 @@ describe('Protocol', () => {
 
   test('Can add multiple attachments to objects relation', async () => {
     // given
-    const {
-      objectProfilePda: objectAProfilePda,
-      objectKeypair: objectAKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
-    const { objectProfilePda: objectBProfilePda } = await createObjectProfile(
-      Keypair.generate(),
-      program,
+    const { program: object1Program } = await createObject();
+    const { objectProfilePda: object1ProfilePda } = await createObjectProfile(
+      object1Program,
+    );
+    const { program: object2Program } = await createObject();
+    const { objectProfilePda: object2ProfilePda } = await createObjectProfile(
+      object2Program,
     );
     const objectsRelationPda = await createObjectsRelation(
-      objectAProfilePda,
-      objectBProfilePda,
-      objectAKeypair,
-      program,
+      object1ProfilePda,
+      object2ProfilePda,
+      object1Program,
     );
     const uri =
       'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
     const sha256 = new Uint8Array(new Array(64).fill(228));
     const objectsRelationAttachment1Pda = await createObjectRelationAttachment(
       objectsRelationPda,
-      objectAKeypair,
       encode(uri),
       sha256,
-      program,
+      object1Program,
     );
     const objectsRelationAttachment2Pda = await createObjectRelationAttachment(
       objectsRelationPda,
-      objectAKeypair,
       encode(uri),
       sha256,
-      program,
+      object1Program,
     );
-    const attachment1 = await program.account.attachment.fetch(
+    const attachment1 = await object1Program.account.attachment.fetch(
       objectsRelationAttachment1Pda,
     );
-    const attachment2 = await program.account.attachment.fetch(
+    const attachment2 = await object1Program.account.attachment.fetch(
       objectsRelationAttachment2Pda,
     );
-    const relationAfter = await program.account.objectsRelation.fetch(
+    const relationAfter = await object1Program.account.objectsRelation.fetch(
       objectsRelationPda,
     );
     // then
@@ -220,61 +208,60 @@ describe('Protocol', () => {
 
   test('Can do attachment acknowledgement', async () => {
     // given
-    const {
-      objectProfilePda: objectAProfilePda,
-      objectKeypair: objectAKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
-    const {
-      objectProfilePda: objectBProfilePda,
-      objectKeypair: objectBKeypair,
-    } = await createObjectProfile(Keypair.generate(), program);
-    const { objectProfilePda: objectOrgProfilePda } = await createObjectProfile(
-      Keypair.generate(),
-      program,
+    const { program: object1Program } = await createObject();
+    const { objectProfilePda: object1ProfilePda } = await createObjectProfile(
+      object1Program,
+    );
+    const { program: object2Program, publicKey: object2PublicKey } =
+      await createObject();
+    const { objectProfilePda: object2ProfilePda } = await createObjectProfile(
+      object2Program,
+    );
+    const { program: object3Program } = await createObject();
+    const { objectProfilePda: object3ProfilePda } = await createObjectProfile(
+      object3Program,
     );
     const objectsRelationAOrgPda = await createObjectsRelation(
-      objectAProfilePda,
-      objectOrgProfilePda,
-      objectAKeypair,
-      program,
+      object1ProfilePda,
+      object3ProfilePda,
+      object1Program,
     );
     const objectsRelationBOrgPda = await createObjectsRelation(
-      objectBProfilePda,
-      objectOrgProfilePda,
-      objectBKeypair,
-      program,
+      object2ProfilePda,
+      object3ProfilePda,
+      object2Program,
     );
     const uri =
       'https://app.slink.cool/profiles/grkhrA8hQpcLQz2V6pAoGFEaW1kXu7e1myhrqGUYNcc';
     const sha256 = new Uint8Array(new Array(64).fill(228));
     // when
     const attachmentPda = await createObjectProfileAttachment(
-      objectAProfilePda,
-      objectAKeypair,
+      object1ProfilePda,
       encode(uri),
       sha256,
-      program,
+      object1Program,
     );
-    const attachment = await program.account.attachment.fetch(attachmentPda);
+    const attachment = await object1Program.account.attachment.fetch(
+      attachmentPda,
+    );
 
     console.log(attachment.sha256Hash);
     console.log(decode(attachment.uri));
     const [acknowledgementPda] = await PublicKey.findProgramAddress(
       [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
-      program.programId,
+      anchorProgram.programId,
     );
-    await program.methods
-      .createAcknowledgment(objectAProfilePda, attachment.index)
+    await object2Program.methods
+      .createAcknowledgment(object1ProfilePda, attachment.index)
       .accounts({
         objectsRelationAc: objectsRelationAOrgPda,
         objectsRelationBc: objectsRelationBOrgPda,
         objectProfileAttachment: attachmentPda,
         acknowledgement: acknowledgementPda,
-        creator: objectBKeypair.publicKey,
+        creator: object2PublicKey,
       })
-      .signers([objectBKeypair])
       .rpc();
-    const acknowledgement = await program.account.acknowledgment.fetch(
+    const acknowledgement = await object1Program.account.acknowledgment.fetch(
       acknowledgementPda,
     );
     // then
@@ -283,4 +270,22 @@ describe('Protocol', () => {
       attachmentPda.toBase58(),
     );
   });
+
+  async function createObject() {
+    const keypair = Keypair.generate();
+    const walletAdapter = new NodeWalletAdapter(keypair);
+    await fundKeypair(keypair.publicKey, anchorProgram.provider.connection);
+    const objectProvider = new AnchorProvider(
+      provider.connection,
+      walletAdapter,
+      {
+        preflightCommitment: 'processed',
+        commitment: 'processed',
+      },
+    );
+    return {
+      publicKey: keypair.publicKey,
+      program: new Program(IDL, anchorProgram.programId, objectProvider),
+    };
+  }
 });
