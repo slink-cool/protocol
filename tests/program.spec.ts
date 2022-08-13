@@ -1,14 +1,14 @@
 import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import type { Delink } from '../target/types/delink';
-import { IDL } from '../target/types/delink';
+import type { Slink } from '../target/types/slink';
+import { IDL } from '../target/types/slink';
 import {
   createObjectProfile,
   createObjectProfileAttachment,
   createObjectRelationAttachment,
   createObjectsRelation,
-} from '../src/api';
+} from '../src/program/program-api';
 import { decode, encode, fundKeypair } from '../src/utils/utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
@@ -17,7 +17,7 @@ describe('Protocol', () => {
   const provider = AnchorProvider.env();
   setProvider(provider);
 
-  const anchorProgram = anchor.workspace.Delink as Program<Delink>;
+  const anchorProgram = anchor.workspace.Slink as Program<Slink>;
 
   test('Can create object profile', async () => {
     // given / when
@@ -201,6 +201,8 @@ describe('Protocol', () => {
     expect(objectsRelationAttachment1Pda.toBase58()).not.toBe(
       objectsRelationAttachment2Pda.toBase58(),
     );
+    expect(decode(attachment1.uri)).toBe(uri);
+    expect(decode(attachment2.uri)).toBe(uri);
     expect(attachment1.index).toBe(0);
     expect(attachment2.index).toBe(1);
     expect(relationAfter.nextAttachmentIndex).toBe(2);
@@ -244,9 +246,6 @@ describe('Protocol', () => {
     const attachment = await object1Program.account.attachment.fetch(
       attachmentPda,
     );
-
-    console.log(attachment.sha256Hash);
-    console.log(decode(attachment.uri));
     const [acknowledgementPda] = await PublicKey.findProgramAddress(
       [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
       anchorProgram.programId,

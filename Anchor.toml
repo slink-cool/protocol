@@ -2,7 +2,7 @@
 seeds = false
 
 [programs.localnet]
-sbt = "XV93mE9SR2baA5b7bq2JRAj3JtMjL4Y9pMQChrBH7YB"
+slink = "Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr"
 
 [registry]
 url = "https://anchor.projectserum.com"

@@ -1,12 +1,12 @@
 import { PublicKey } from '@solana/web3.js';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 import type { Program } from '@project-serum/anchor';
-import * as anchor from '@project-serum/anchor';
-import type { Delink } from '../target/types/delink';
+import type { Slink } from '../../target/types/slink';
+import { BN } from '@project-serum/anchor';
 
 export async function getObjectProfilePda(
   object: PublicKey,
-  program: Program<Delink>,
+  program: Program<Slink>,
 ) {
   const [objectProfilePda] = await PublicKey.findProgramAddress(
     [utf8.encode('object_profile'), object.toBuffer()],
@@ -15,7 +15,7 @@ export async function getObjectProfilePda(
   return objectProfilePda;
 }
 
-export async function createObjectProfile(program: Program<Delink>) {
+export async function createObjectProfile(program: Program<Slink>) {
   const object = program.provider.publicKey!;
   const objectProfilePda = await getObjectProfilePda(object, program);
   await program.methods
@@ -24,7 +24,6 @@ export async function createObjectProfile(program: Program<Delink>) {
       objectProfile: objectProfilePda,
       creator: program.provider.publicKey,
     })
-    // .signers([objectKeypair])
     .rpc();
   return { object, objectProfilePda };
 }
@@ -32,13 +31,13 @@ export async function createObjectProfile(program: Program<Delink>) {
 export async function findNextObjectProfileAttachmentPda(
   objectProfilePda: PublicKey,
   nextAttachmentIndex: number,
-  program: Program<Delink>,
+  program: Program<Slink>,
 ) {
   const [objectProfileAttachmentPda] = await PublicKey.findProgramAddress(
     [
       utf8.encode('object_profile_attachment'),
       objectProfilePda.toBuffer(),
-      new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
+      new BN(nextAttachmentIndex).toArrayLike(Buffer),
     ],
     program.programId,
   );
@@ -49,7 +48,7 @@ export async function createObjectProfileAttachment(
   objectProfilePda: PublicKey,
   uri: Uint8Array,
   sha256: Uint8Array,
-  program: Program<Delink>,
+  program: Program<Slink>,
 ) {
   const objectProfileBefore = await program.account.objectProfile.fetch(
     objectProfilePda,
@@ -77,7 +76,7 @@ export async function createObjectProfileAttachment(
 export async function createObjectsRelation(
   objectAProfilePda: PublicKey,
   objectBProfilePda: PublicKey,
-  program: Program<Delink>,
+  program: Program<Slink>,
 ) {
   const [objectsRelationPda] = await PublicKey.findProgramAddress(
     [
@@ -103,7 +102,7 @@ export async function createObjectRelationAttachment(
   objectsRelationPda: PublicKey,
   uri: Uint8Array,
   sha256: Uint8Array,
-  program: Program<Delink>,
+  program: Program<Slink>,
 ) {
   const relationBefore = await program.account.objectsRelation.fetch(
     objectsRelationPda,
@@ -113,7 +112,7 @@ export async function createObjectRelationAttachment(
     [
       utf8.encode('objects_relation_attachment'),
       objectsRelationPda.toBuffer(),
-      new anchor.BN(nextAttachmentIndex).toArrayLike(Buffer),
+      new BN(nextAttachmentIndex).toArrayLike(Buffer),
     ],
     program.programId,
   );

@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
 
-declare_id!("ECcfUsei1GzLwuLhvpoXqkcBvz3VA7MdUMLwqHxiMRfR");
+declare_id!("Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr");
 
 #[program]
-pub mod delink {
+pub mod slink {
     use super::*;
 
     pub fn create_object_profile(ctx: Context<CreateObjectProfile>, object_address: Pubkey) -> Result<()> {
@@ -76,7 +76,7 @@ pub struct CreateObjectProfile<'info> {
             object_address.as_ref()
         ],
         bump,
-        constraint = creator.key() == object_address @DelinkError::AuthorizationError,
+        constraint = creator.key() == object_address @SlinkError::AuthorizationError,
     )]
     pub object_profile: Account<'info, ObjectProfile>,
     #[account(mut)]
@@ -94,7 +94,7 @@ pub struct CreateObjectProfileAttachment<'info> {
             object_profile.object_address.as_ref(),
         ],
         bump = object_profile.bump,
-        constraint = creator.key() == object_profile.object_address @DelinkError::AuthorizationError,
+        constraint = creator.key() == object_profile.object_address @SlinkError::AuthorizationError,
     )]
     pub object_profile: Account<'info, ObjectProfile>,
     #[account(
@@ -142,8 +142,8 @@ pub struct CreateObjectsRelation<'info> {
             object_b_profile.key().as_ref(),
         ],
         bump,
-        constraint = creator.key() == object_a_profile.object_address @DelinkError::AuthorizationError,
-        constraint = object_a_profile.key() != object_b_profile.key() @DelinkError::CyclicLinkError,
+        constraint = creator.key() == object_a_profile.object_address @SlinkError::AuthorizationError,
+        constraint = object_a_profile.key() != object_b_profile.key() @SlinkError::CyclicLinkError,
     )]
     pub objects_relation: Account<'info, ObjectsRelation>,
     #[account(mut)]
@@ -162,7 +162,7 @@ pub struct CreateObjectsRelationAttachment<'info> {
             objects_relation.object_b_profile_address.as_ref(),
         ],
         bump,
-        constraint = creator.key() == objects_relation.created_by @DelinkError::AuthorizationError,
+        constraint = creator.key() == objects_relation.created_by @SlinkError::AuthorizationError,
     )]
     pub objects_relation: Account<'info, ObjectsRelation>,
     #[account(
@@ -212,7 +212,7 @@ pub struct CreateAcknowledgment<'info> {
             &attachment_index.to_le_bytes()
         ],
         bump = object_profile_attachment.bump,
-        constraint = object_profile_attachment.entity_address == profile_address @DelinkError::AuthorizationError,
+        constraint = object_profile_attachment.entity_address == profile_address @SlinkError::AuthorizationError,
     )]
     pub object_profile_attachment: Account<'info, Attachment>,
 
@@ -225,9 +225,9 @@ pub struct CreateAcknowledgment<'info> {
             object_profile_attachment.key().as_ref()
         ],
         bump,
-        constraint = objects_relation_ac.object_b_profile_address == objects_relation_bc.object_b_profile_address @DelinkError::ProfilesNotLinkedError,
-        constraint = creator.key() != object_profile_attachment.created_by @DelinkError::AuthorizationError,
-        constraint = objects_relation_ac.object_a_profile_address == profile_address || objects_relation_bc.object_a_profile_address == profile_address @DelinkError::AuthorizationError,
+        constraint = objects_relation_ac.object_b_profile_address == objects_relation_bc.object_b_profile_address @SlinkError::ProfilesNotLinkedError,
+        constraint = creator.key() != object_profile_attachment.created_by @SlinkError::AuthorizationError,
+        constraint = objects_relation_ac.object_a_profile_address == profile_address || objects_relation_bc.object_a_profile_address == profile_address @SlinkError::AuthorizationError,
     )]
     pub acknowledgement: Account<'info, Acknowledgment>,
 
@@ -356,7 +356,7 @@ impl Acknowledgment {
 }
 
 #[error_code]
-pub enum DelinkError {
+pub enum SlinkError {
     AuthorizationError,
     ProfilesNotLinkedError,
     CyclicLinkError,
