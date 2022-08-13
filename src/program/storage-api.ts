@@ -1,3 +1,5 @@
+import type { PublicKey } from '@solana/web3.js';
+
 export interface SaveAttachmentCommand<T> {
   attachment: Attachment<T>;
 }
@@ -7,6 +9,7 @@ export interface Attachment<T> {
   description: string;
   type: string;
   payload: T;
+  accountPda: PublicKey;
 }
 
 export interface PersistedAttachment<T> {
@@ -17,6 +20,7 @@ export interface PersistedAttachment<T> {
 export interface AttachmentMetadata {
   uri: string;
   sha256: Uint8Array;
+  accountAddress: PublicKey;
 }
 
 export interface AttachmentStorage {
