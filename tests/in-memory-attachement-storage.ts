@@ -11,6 +11,13 @@ export class InMemoryAttachmentStorage implements AttachmentStorage {
     PersistedAttachment<any>
   >();
 
+  async findAll<T>(type: string): Promise<PersistedAttachment<T>[]> {
+    const values = Array.from(
+      this.storage.values(),
+    ) as PersistedAttachment<T>[];
+    return values.filter((it) => it.attachment.type === type);
+  }
+
   async findOne<T>(uri: string): Promise<PersistedAttachment<T>> {
     const persistedAttachment = this.storage.get(uri);
     if (!persistedAttachment) {

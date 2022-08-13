@@ -45,8 +45,9 @@ describe('Slink application', () => {
         description: 'Solana is a decentralized network',
       },
     };
-    const { persistedAttachment, account, skill } =
-      await userApi.addProfileSkill(command);
+    const { persistedAttachment, account, skill } = await userApi.addSkill(
+      command,
+    );
     // then
     expect(skill.name).toBe(command.skill.name);
     expect(skill.description).toBe(command.skill.description);
@@ -55,6 +56,34 @@ describe('Slink application', () => {
     expect(account.address.toBase58()).toBe(
       persistedAttachment.metadata.accountAddress.toBase58(),
     );
+  });
+
+  test('Can list skill records', async () => {
+    // given
+    const userApi = await createSlinkApi();
+    await userApi.createProfile();
+    // when
+    const addSolanaSkillCommand: AddSkillCommand = {
+      skill: {
+        name: 'Solana',
+        description: 'Solana is a decentralized network',
+      },
+    };
+    const solanaSkill = await userApi.addSkill(addSolanaSkillCommand);
+    const addAnchorSkillCommand: AddSkillCommand = {
+      skill: {
+        name: 'Anchor',
+        description:
+          "Anchor is a framework for Solana's Sealevel runtime providing several convenient developer tools for writing smart contracts.",
+      },
+    };
+    const anchorSkill = await userApi.addSkill(addAnchorSkillCommand);
+    // when
+    const skills = await userApi.findAllSkills();
+    // then
+    expect(skills).toHaveLength(2);
+    expect(skills[0]).toMatchObject(solanaSkill);
+    expect(skills[1]).toMatchObject(anchorSkill);
   });
 
   async function createSlinkApi() {
