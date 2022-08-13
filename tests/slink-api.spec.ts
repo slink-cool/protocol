@@ -7,6 +7,7 @@ import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
 import { SlinkApi } from '../src/slink/slink-api';
 import { InMemoryAttachmentStorage } from './in-memory-attachement-storage';
 import type { AddSkillCommand, Profile } from '../src/slink/model';
+import type { AttachmentStorage } from '../src/program/storage-api';
 
 describe('Slink application', () => {
   const provider = AnchorProvider.env();
@@ -60,8 +61,10 @@ describe('Slink application', () => {
 
   test('Can list skill records', async () => {
     // given
-    const userApi = await createSlinkApi();
-    await userApi.createProfile();
+    const storage = new InMemoryAttachmentStorage();
+    const user1Api = await createSlinkApi(storage);
+    const user2Api = await createSlinkApi(storage);
+    await user1Api.createProfile();
     // when
     const addSolanaSkillCommand: AddSkillCommand = {
       skill: {
@@ -69,7 +72,7 @@ describe('Slink application', () => {
         description: 'Solana is a decentralized network',
       },
     };
-    const solanaSkill = await userApi.addSkill(addSolanaSkillCommand);
+    const solanaSkill = await user1Api.addSkill(addSolanaSkillCommand);
     const addAnchorSkillCommand: AddSkillCommand = {
       skill: {
         name: 'Anchor',
@@ -77,19 +80,23 @@ describe('Slink application', () => {
           "Anchor is a framework for Solana's Sealevel runtime providing several convenient developer tools for writing smart contracts.",
       },
     };
-    const anchorSkill = await userApi.addSkill(addAnchorSkillCommand);
+    const anchorSkill = await user1Api.addSkill(addAnchorSkillCommand);
     // when
-    const skills = await userApi.findAllSkills();
+    const skills = await user2Api.findAllSkills(
+      user1Api.walletAdapter.publicKey,
+    );
     // then
     expect(skills).toHaveLength(2);
     expect(skills[0]).toMatchObject(solanaSkill);
     expect(skills[1]).toMatchObject(anchorSkill);
   });
 
-  async function createSlinkApi() {
+  async function createSlinkApi(
+    storage: AttachmentStorage = new InMemoryAttachmentStorage(),
+  ): Promise<SlinkApi> {
     const keypair = Keypair.generate();
     const walletAdapter = new NodeWalletAdapter(keypair);
     await fundKeypair(keypair.publicKey, anchorProgram.provider.connection);
-    return SlinkApi.create(walletAdapter, new InMemoryAttachmentStorage());
+    return SlinkApi.create(walletAdapter, storage);
   }
 });

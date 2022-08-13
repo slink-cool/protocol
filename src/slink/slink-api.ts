@@ -21,10 +21,12 @@ export class SlinkApi {
   ) {}
 
   async getProfile(): Promise<Profile | null> {
-    const objectProfilePda = await getObjectProfilePda(
-      this.walletAdapter.publicKey,
-      this.program,
-    );
+    const profileOwner = this.walletAdapter.publicKey;
+    return this.findProfile(profileOwner);
+  }
+
+  async findProfile(owner: PublicKey) {
+    const objectProfilePda = await getObjectProfilePda(owner, this.program);
     try {
       const account = await this.program.account.objectProfile.fetch(
         objectProfilePda,
@@ -99,8 +101,8 @@ export class SlinkApi {
     };
   }
 
-  async findAllSkills(): Promise<PersistedSkill[]> {
-    const profile: Profile | null = await this.getProfile();
+  async findAllSkills(owner: PublicKey): Promise<PersistedSkill[]> {
+    const profile: Profile | null = await this.findProfile(owner);
     if (!profile) {
       throw new Error('Profile does not exist, create it first');
     }
