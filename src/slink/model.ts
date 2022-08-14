@@ -34,3 +34,16 @@ export interface Engagement {
   owner: Profile;
   counterParty: Profile;
 }
+
+export interface MutalOrganizationMembership {
+  organization: Profile;
+}
+
+export type EngagementProof = MutalOrganizationMembership;
+
+export interface SkillApproval {
+  address: PublicKey;
+  skillOwner: Profile;
+  skill: PersistedSkill;
+  approvedBy: Profile;
+}

@@ -148,7 +148,6 @@ export async function acknowledgeAttachment(
   attachmentPda: PublicKey,
   objectsRelationAOrgPda: PublicKey,
   objectsRelationBOrgPda: PublicKey,
-  object2PublicKey: PublicKey,
   program: Program<Slink>,
 ) {
   const [acknowledgementPda] = await PublicKey.findProgramAddress(
@@ -164,7 +163,7 @@ export async function acknowledgeAttachment(
       objectsRelationBc: objectsRelationBOrgPda,
       objectProfileAttachment: attachmentPda,
       acknowledgement: acknowledgementPda,
-      creator: object2PublicKey,
+      creator: program.provider.publicKey!,
     })
     .rpc();
   return acknowledgementPda;

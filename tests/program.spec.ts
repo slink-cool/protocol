@@ -247,7 +247,6 @@ describe('Protocol', () => {
       attachmentPda,
       objectsRelationAOrgPda,
       objectsRelationBOrgPda,
-      object2PublicKey,
       object2Program,
     );
     const acknowledgement = await object1Program.account.acknowledgment.fetch(
