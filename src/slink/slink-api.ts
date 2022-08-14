@@ -7,10 +7,13 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import type {
   AddSkillCommand,
   Engagement,
+  EngagementProof,
   PersistedSkill,
   Profile,
+  SkillApproval,
 } from './model';
 import {
+  acknowledgeAttachment,
   createObjectProfile,
   createObjectProfileAttachment,
   createObjectsRelation,
@@ -170,6 +173,10 @@ export class SlinkApi {
     if (!profile) {
       throw new Error('Profile does not exist, create it first');
     }
+    return this.findEngagementBetween(profile, counterParty);
+  }
+
+  async findEngagementBetween(profile: Profile, counterParty: Profile) {
     const objectsRelationPda = await findObjectsRelationPda(
       profile.address,
       counterParty.address,
@@ -215,5 +222,46 @@ export class SlinkApi {
       provider,
     );
     return new SlinkApi(walletAdapter, program, attachmentStorage);
+  }
+
+  async approveSkill(
+    skill: PersistedSkill,
+    engagementProof: EngagementProof,
+  ): Promise<SkillApproval> {
+    const skillAttachment = await this.program.account.attachment.fetch(
+      skill.account.address,
+    );
+    const skillOwnerProfileAddress = skillAttachment.entityAddress;
+    const skillOwnerProfile = await this.findProfileByAddress(
+      skillOwnerProfileAddress,
+    );
+    if (!skillOwnerProfile) {
+      throw new Error('Skill owner profile does not exist, create it first');
+    }
+    const skillApproverProfile = await this.getProfile();
+    if (!skillApproverProfile) {
+      throw new Error('Skill approver profile does not exist, create it first');
+    }
+    const organizationProfile = engagementProof.organization;
+    const skillOwnerToOrgEngagement = await this.findEngagementBetween(
+      skillOwnerProfile,
+      organizationProfile,
+    );
+    const approverToOrgEngagement = await this.findEngagementBetween(
+      skillApproverProfile,
+      organizationProfile,
+    );
+    const address = await acknowledgeAttachment(
+      skill.account.address,
+      skillOwnerToOrgEngagement.address,
+      approverToOrgEngagement.address,
+      this.program,
+    );
+    return {
+      address,
+      skill,
+      skillOwner: skillOwnerProfile,
+      approvedBy: skillApproverProfile,
+    };
   }
 }

@@ -6,7 +6,11 @@ import { fundKeypair } from '../src/utils/utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
 import { SlinkApi } from '../src/slink/slink-api';
 import { InMemoryAttachmentStorage } from './in-memory-attachement-storage';
-import type { AddSkillCommand, Profile } from '../src/slink/model';
+import type {
+  AddSkillCommand,
+  MutalOrganizationMembership,
+  Profile,
+} from '../src/slink/model';
 import type { AttachmentStorage } from '../src/program/storage-api';
 
 describe('Slink application', () => {
@@ -116,6 +120,45 @@ describe('Slink application', () => {
     // then
     expect(engagement.owner).toMatchObject(user1Profile);
     expect(engagement.counterParty).toMatchObject(organizationProfile);
+  });
+
+  test('Can approve skill', async () => {
+    // given
+    const [user1Api, user2Api, organizationApi] = await Promise.all([
+      createSlinkApi(),
+      createSlinkApi(),
+      createSlinkApi(),
+    ]);
+    const [user1Profile, user2Profile, organizationProfile] = await Promise.all(
+      [
+        user1Api.createProfile(),
+        user2Api.createProfile(),
+        organizationApi.createProfile(),
+      ],
+    );
+    await Promise.all([
+      user1Api.engageWith(organizationProfile),
+      user2Api.engageWith(organizationProfile),
+    ]);
+    const addSkillCommand: AddSkillCommand = {
+      skill: {
+        name: 'Solana',
+        description: 'Solana is a decentralized network',
+      },
+    };
+    const user1Skill = await user1Api.addSkill(addSkillCommand);
+    // when
+    const engagementProof: MutalOrganizationMembership = {
+      organization: organizationProfile,
+    };
+    const approval = await user2Api.approveSkill(user1Skill, engagementProof);
+    // then
+    expect(approval.skillOwner).toMatchObject({
+      ...user1Profile,
+      nextAttachmentIdx: user1Profile.nextAttachmentIdx + 1,
+    });
+    expect(approval.skill).toMatchObject(user1Skill);
+    expect(approval.approvedBy).toMatchObject(user2Profile);
   });
 
   async function createSlinkApi(
