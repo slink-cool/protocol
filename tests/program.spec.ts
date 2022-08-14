@@ -1,9 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
-import { Keypair, PublicKey } from '@solana/web3.js';
+import { Keypair } from '@solana/web3.js';
 import type { Slink } from '../target/types/slink';
 import { IDL } from '../target/types/slink';
 import {
+  acknowledgeAttachment,
   createObjectProfile,
   createObjectProfileAttachment,
   createObjectRelationAttachment,
@@ -11,7 +12,6 @@ import {
 } from '../src/program/program-api';
 import { decode, encode, fundKeypair } from '../src/utils/utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
-import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 
 describe('Protocol', () => {
   const provider = AnchorProvider.env();
@@ -243,23 +243,13 @@ describe('Protocol', () => {
       sha256,
       object1Program,
     );
-    const attachment = await object1Program.account.attachment.fetch(
+    const acknowledgementPda = await acknowledgeAttachment(
       attachmentPda,
+      objectsRelationAOrgPda,
+      objectsRelationBOrgPda,
+      object2PublicKey,
+      object2Program,
     );
-    const [acknowledgementPda] = await PublicKey.findProgramAddress(
-      [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
-      anchorProgram.programId,
-    );
-    await object2Program.methods
-      .createAcknowledgment(object1ProfilePda, attachment.index)
-      .accounts({
-        objectsRelationAc: objectsRelationAOrgPda,
-        objectsRelationBc: objectsRelationBOrgPda,
-        objectProfileAttachment: attachmentPda,
-        acknowledgement: acknowledgementPda,
-        creator: object2PublicKey,
-      })
-      .rpc();
     const acknowledgement = await object1Program.account.acknowledgment.fetch(
       acknowledgementPda,
     );

@@ -1,8 +1,9 @@
 import { PublicKey } from '@solana/web3.js';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
-import type { Program } from '@project-serum/anchor';
+import type { IdlTypes, Program } from '@project-serum/anchor';
 import type { Slink } from '../../target/types/slink';
 import { BN } from '@project-serum/anchor';
+import type { Skill } from '../slink/model';
 
 export async function getObjectProfilePda(
   object: PublicKey,
@@ -141,4 +142,30 @@ export async function createObjectRelationAttachment(
     })
     .rpc();
   return objectsRelationAttachmentPda;
+}
+
+export async function acknowledgeAttachment(
+  attachmentPda: PublicKey,
+  objectsRelationAOrgPda: PublicKey,
+  objectsRelationBOrgPda: PublicKey,
+  object2PublicKey: PublicKey,
+  program: Program<Slink>,
+) {
+  const [acknowledgementPda] = await PublicKey.findProgramAddress(
+    [utf8.encode('acknowledgement'), attachmentPda.toBuffer()],
+    program.programId,
+  );
+  const attachment = await program.account.attachment.fetch(attachmentPda);
+  const profileAddress = attachment.entityAddress;
+  await program.methods
+    .createAcknowledgment(profileAddress, attachment.index)
+    .accounts({
+      objectsRelationAc: objectsRelationAOrgPda,
+      objectsRelationBc: objectsRelationBOrgPda,
+      objectProfileAttachment: attachmentPda,
+      acknowledgement: acknowledgementPda,
+      creator: object2PublicKey,
+    })
+    .rpc();
+  return acknowledgementPda;
 }
