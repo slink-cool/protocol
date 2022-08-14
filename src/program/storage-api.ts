@@ -25,6 +25,8 @@ export interface AttachmentMetadata {
 
 export interface AttachmentStorage {
   save<T>(command: SaveAttachmentCommand<T>): Promise<PersistedAttachment<T>>;
+
   findOne<T>(uri: string): Promise<PersistedAttachment<T>>;
+
   findAll<T>(type: string): Promise<PersistedAttachment<T>[]>;
 }

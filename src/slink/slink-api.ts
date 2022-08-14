@@ -30,6 +30,26 @@ export class SlinkApi {
     readonly attachmentStorage: AttachmentStorage,
   ) {}
 
+  static create(
+    walletAdapter: WalletAdapter,
+    attachmentStorage: AttachmentStorage,
+    rpcUrl: string = 'http://localhost:8899',
+  ) {
+    const connection = new Connection(rpcUrl, {
+      commitment: 'processed',
+    });
+    const provider = new AnchorProvider(connection, walletAdapter, {
+      preflightCommitment: 'processed',
+      commitment: 'processed',
+    });
+    const program = new Program(
+      IDL,
+      new PublicKey('Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr'),
+      provider,
+    );
+    return new SlinkApi(walletAdapter, program, attachmentStorage);
+  }
+
   async getProfile(): Promise<Profile | null> {
     const profileOwner = this.walletAdapter.publicKey;
     return this.findProfileByOwner(profileOwner);
@@ -38,21 +58,6 @@ export class SlinkApi {
   async findProfileByOwner(owner: PublicKey): Promise<Profile | null> {
     const objectProfilePda = await getObjectProfilePda(owner, this.program);
     return await this.findProfileByAddress(objectProfilePda);
-  }
-
-  private async findProfileByAddress(address: PublicKey) {
-    try {
-      const account = await this.program.account.objectProfile.fetch(address);
-      return {
-        address: address,
-        object: account.objectAddress,
-        authority: account.authority,
-        nextAttachmentIdx: account.nextAttachmentIndex,
-      };
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
   }
 
   async createProfile(): Promise<Profile> {
@@ -204,26 +209,6 @@ export class SlinkApi {
     };
   }
 
-  static create(
-    walletAdapter: WalletAdapter,
-    attachmentStorage: AttachmentStorage,
-    rpcUrl: string = 'http://localhost:8899',
-  ) {
-    const connection = new Connection(rpcUrl, {
-      commitment: 'processed',
-    });
-    const provider = new AnchorProvider(connection, walletAdapter, {
-      preflightCommitment: 'processed',
-      commitment: 'processed',
-    });
-    const program = new Program(
-      IDL,
-      new PublicKey('Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr'),
-      provider,
-    );
-    return new SlinkApi(walletAdapter, program, attachmentStorage);
-  }
-
   async approveSkill(
     skill: PersistedSkill,
     engagementProof: EngagementProof,
@@ -263,5 +248,20 @@ export class SlinkApi {
       skillOwner: skillOwnerProfile,
       approvedBy: skillApproverProfile,
     };
+  }
+
+  private async findProfileByAddress(address: PublicKey) {
+    try {
+      const account = await this.program.account.objectProfile.fetch(address);
+      return {
+        address: address,
+        object: account.objectAddress,
+        authority: account.authority,
+        nextAttachmentIdx: account.nextAttachmentIndex,
+      };
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
   }
 }
