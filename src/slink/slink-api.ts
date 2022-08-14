@@ -4,11 +4,18 @@ import type { WalletAdapter } from '../utils/wallet-adapter';
 import type { Slink } from '../../target/types/slink';
 import { IDL } from '../../target/types/slink';
 import { Connection, PublicKey } from '@solana/web3.js';
-import type { AddSkillCommand, PersistedSkill, Profile } from './model';
+import type {
+  AddSkillCommand,
+  Engagement,
+  PersistedSkill,
+  Profile,
+} from './model';
 import {
   createObjectProfile,
   createObjectProfileAttachment,
+  createObjectsRelation,
   findNextObjectProfileAttachmentPda,
+  findObjectsRelationPda,
   getObjectProfilePda,
 } from '../program/program-api';
 import { decode, encode } from '../utils/utils';
@@ -22,17 +29,19 @@ export class SlinkApi {
 
   async getProfile(): Promise<Profile | null> {
     const profileOwner = this.walletAdapter.publicKey;
-    return this.findProfile(profileOwner);
+    return this.findProfileByOwner(profileOwner);
   }
 
-  async findProfile(owner: PublicKey) {
+  async findProfileByOwner(owner: PublicKey): Promise<Profile | null> {
     const objectProfilePda = await getObjectProfilePda(owner, this.program);
+    return await this.findProfileByAddress(objectProfilePda);
+  }
+
+  private async findProfileByAddress(address: PublicKey) {
     try {
-      const account = await this.program.account.objectProfile.fetch(
-        objectProfilePda,
-      );
+      const account = await this.program.account.objectProfile.fetch(address);
       return {
-        address: objectProfilePda,
+        address: address,
         object: account.objectAddress,
         authority: account.authority,
         nextAttachmentIdx: account.nextAttachmentIndex,
@@ -49,7 +58,7 @@ export class SlinkApi {
       objectProfilePda,
     );
     return {
-      address: account.entityAddress,
+      address: objectProfilePda,
       object: account.objectAddress,
       authority: account.authority,
       nextAttachmentIdx: account.nextAttachmentIndex,
@@ -102,7 +111,7 @@ export class SlinkApi {
   }
 
   async findAllSkills(owner: PublicKey): Promise<PersistedSkill[]> {
-    const profile: Profile | null = await this.findProfile(owner);
+    const profile: Profile | null = await this.findProfileByOwner(owner);
     if (!profile) {
       throw new Error('Profile does not exist, create it first');
     }
@@ -139,11 +148,61 @@ export class SlinkApi {
     });
   }
 
+  async engageWith(counterParty: Profile): Promise<Engagement> {
+    const profile = await this.findProfileByOwner(this.walletAdapter.publicKey);
+    if (!profile) {
+      throw new Error('Profile does not exist, create it first');
+    }
+    const objectsRelationPda = await createObjectsRelation(
+      profile.address,
+      counterParty.address,
+      this.program,
+    );
+    return {
+      address: objectsRelationPda,
+      owner: profile,
+      counterParty,
+    };
+  }
+
+  async findEngagement(counterParty: Profile): Promise<Engagement> {
+    const profile = await this.findProfileByOwner(this.walletAdapter.publicKey);
+    if (!profile) {
+      throw new Error('Profile does not exist, create it first');
+    }
+    const objectsRelationPda = await findObjectsRelationPda(
+      profile.address,
+      counterParty.address,
+      this.program,
+    );
+    const account = await this.program.account.objectsRelation.fetch(
+      objectsRelationPda,
+    );
+    const profileFound = await this.findProfileByAddress(
+      account.objectAProfileAddress,
+    );
+    const counterPartyProfileFound = await this.findProfileByAddress(
+      account.objectBProfileAddress,
+    );
+    if (!profileFound) {
+      throw new Error('Profile does not exist, create it first');
+    }
+    if (!counterPartyProfileFound) {
+      throw new Error('Counterparty profile does not exist, create it first');
+    }
+    return {
+      address: objectsRelationPda,
+      owner: profileFound,
+      counterParty: counterPartyProfileFound,
+    };
+  }
+
   static create(
     walletAdapter: WalletAdapter,
     attachmentStorage: AttachmentStorage,
+    rpcUrl: string = 'http://localhost:8899',
   ) {
-    const connection = new Connection('http://localhost:8899', {
+    const connection = new Connection(rpcUrl, {
       commitment: 'processed',
     });
     const provider = new AnchorProvider(connection, walletAdapter, {

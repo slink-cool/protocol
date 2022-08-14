@@ -28,3 +28,9 @@ export interface PersistedSkill {
 export interface AddSkillCommand {
   skill: Skill;
 }
+
+export interface Engagement {
+  address: PublicKey;
+  owner: Profile;
+  counterParty: Profile;
+}

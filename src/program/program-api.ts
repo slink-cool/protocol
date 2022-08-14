@@ -73,7 +73,7 @@ export async function createObjectProfileAttachment(
   return objectProfileAttachmentPda;
 }
 
-export async function createObjectsRelation(
+export async function findObjectsRelationPda(
   objectAProfilePda: PublicKey,
   objectBProfilePda: PublicKey,
   program: Program<Slink>,
@@ -85,6 +85,19 @@ export async function createObjectsRelation(
       objectBProfilePda.toBytes(),
     ],
     program.programId,
+  );
+  return objectsRelationPda;
+}
+
+export async function createObjectsRelation(
+  objectAProfilePda: PublicKey,
+  objectBProfilePda: PublicKey,
+  program: Program<Slink>,
+) {
+  const objectsRelationPda = await findObjectsRelationPda(
+    objectAProfilePda,
+    objectBProfilePda,
+    program,
   );
   await program.methods
     .createObjectsRelation()

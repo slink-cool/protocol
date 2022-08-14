@@ -91,6 +91,33 @@ describe('Slink application', () => {
     expect(skills[1]).toMatchObject(anchorSkill);
   });
 
+  test('Can engage with organization', async () => {
+    // given
+    const user1Api = await createSlinkApi();
+    const organizationApi = await createSlinkApi();
+    const user1Profile = await user1Api.createProfile();
+    const organizationProfile = await organizationApi.createProfile();
+    // when
+    const engagement = await user1Api.engageWith(organizationProfile);
+    // then
+    expect(engagement.owner).toMatchObject(user1Profile);
+    expect(engagement.counterParty).toMatchObject(organizationProfile);
+  });
+
+  test('Can find engagement with organization', async () => {
+    // given
+    const user1Api = await createSlinkApi();
+    const organizationApi = await createSlinkApi();
+    const user1Profile = await user1Api.createProfile();
+    const organizationProfile = await organizationApi.createProfile();
+    await user1Api.engageWith(organizationProfile);
+    // when
+    const engagement = await user1Api.findEngagement(organizationProfile);
+    // then
+    expect(engagement.owner).toMatchObject(user1Profile);
+    expect(engagement.counterParty).toMatchObject(organizationProfile);
+  });
+
   async function createSlinkApi(
     storage: AttachmentStorage = new InMemoryAttachmentStorage(),
   ): Promise<SlinkApi> {
