@@ -8,7 +8,7 @@ slink = "Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr"
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
