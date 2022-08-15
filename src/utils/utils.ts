@@ -25,7 +25,7 @@ export async function fundKeypair(
 ) {
   const airDropRequest = await connection.requestAirdrop(
     publicKey,
-    10 * LAMPORTS_PER_SOL,
+    2 * LAMPORTS_PER_SOL,
   );
   await connection.confirmTransaction(airDropRequest);
 }

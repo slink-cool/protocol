@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
 import { Connection, Keypair } from '@solana/web3.js';
-import type { Slink } from 'program/slink-idl';
+import type { Slink } from 'program/idl';
 import { fundKeypair } from '../src/utils/utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
 import { SlinkApi } from '../src/slink/slink-api';

@@ -1,8 +1,8 @@
 import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
-import { Keypair } from '@solana/web3.js';
-import type { Slink } from '../target/types/slink';
-import { IDL } from '../target/types/slink';
+import { Connection, Keypair } from '@solana/web3.js';
+import type { Slink } from 'program/idl';
+import { IDL } from 'program/idl';
 import {
   acknowledgeAttachment,
   createObjectProfile,

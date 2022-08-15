@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr");
+declare_id!("sLinkWMvQmTDt7Bjy5WJ4GqtBky4VsxybUpmtKCg3yH");
 
 #[program]
 pub mod slink {

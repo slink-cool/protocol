@@ -2,7 +2,7 @@ import { PublicKey } from '@solana/web3.js';
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes';
 import type { Program } from '@project-serum/anchor';
 import { BN } from '@project-serum/anchor';
-import type { Slink } from './slink-idl';
+import type { Slink } from './idl';
 
 export async function getObjectProfilePda(
   object: PublicKey,

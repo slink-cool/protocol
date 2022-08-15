@@ -2,14 +2,21 @@
 seeds = false
 
 [programs.localnet]
-slink = "Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr"
+slink = "sLinkWMvQmTDt7Bjy5WJ4GqtBky4VsxybUpmtKCg3yH"
+
+[programs.devnet]
+slink = "sLinkWMvQmTDt7Bjy5WJ4GqtBky4VsxybUpmtKCg3yH"
+
+[programs.mainnet]
+slink = "sLinkWMvQmTDt7Bjy5WJ4GqtBky4VsxybUpmtKCg3yH"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run jest --detectOpenHandles --forceExit"
+copy-idl = "cp target/types/slink.ts src/program/idl.ts"
