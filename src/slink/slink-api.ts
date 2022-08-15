@@ -1,8 +1,8 @@
 import { AnchorProvider, Program } from '@project-serum/anchor';
 import type { AttachmentStorage } from '../program/storage-api';
 import type { WalletAdapter } from '../utils/wallet-adapter';
-import type { Slink } from '../../target/types/slink';
-import { IDL } from '../../target/types/slink';
+import type { Slink } from '../program/slink-idl';
+import { IDL } from '../program/slink-idl';
 import { Connection, PublicKey } from '@solana/web3.js';
 import type {
   AddSkillCommand,
