@@ -44,7 +44,7 @@ export class SlinkApi {
     });
     const program = new Program(
       IDL,
-      new PublicKey('Eyu3VjokBToM9jq9CE1ZuvuXBTH3v4xvSomwobHvBEqr'),
+      new PublicKey('sLinkWMvQmTDt7Bjy5WJ4GqtBky4VsxybUpmtKCg3yH'),
       provider,
     );
     return new SlinkApi(walletAdapter, program, attachmentStorage);
