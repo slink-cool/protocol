@@ -1,10 +1,25 @@
 {
   "name": "@slink/protocol",
   "version": "0.1.0",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/types/index.d.ts",
   "dependencies": {
     "@project-serum/anchor": "^0.25.0",
     "@solana/wallet-adapter-base": "^0.9.10",
     "@solana/web3.js": "^1.50.1"
+  },
+  "exports": {
+    "import": "./lib/esm/index.js",
+    "require": "./lib/cjs/index.js"
+  },
+  "scripts": {
+    "clean": "rm -rf lib",
+    "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "build": "yarn clean && yarn build:cjs; yarn build:esm",
+    "build:cjs": "tsc --project tsconfig.cjs.json",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "dev": "yarn clean && concurrently \"npm:build:cjs:watch\" \"npm:build:esm:watch\""
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.0",
