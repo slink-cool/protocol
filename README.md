@@ -1,37 +1,10 @@
-## Skills
+# Summary
 
-### Option A.
-Each skill is a fungible token with the following qualities
+Slink's protocol manages digital profiles. It handles relations, attachments and acknowledgements between and for profiles. Built on the Solana Blockchain.
 
-1. No fractional digits
-2. Infinite number of tokens
-3. Minting is done by
+The protocol is generalized and designed to support various domains, e.g. HR, healthcare, traceability, supply chain, etc
 
-
-### Option A.
-Skill is a fungible token with the following qualities
-
-1. No fractional digits
-2. Finite number of tokens
-3. Minting is done by
-
-
-
-// #[account(
-//     seeds = [
-//         b"objects_relation",
-//         objects_relation_ab.object_a_profile_address.as_ref(),
-//         objects_relation_ab.object_b_profile_address.as_ref(),
-//     ],
-//     bump = objects_relation_ab
-// )]
-// pub objects_relation_ab: Account<'info, ObjectsRelation>,
-// #[account(
-//     seeds = [
-//         b"objects_relation",
-//         objects_relation_ba.object_b_profile_address.as_ref(),
-//         objects_relation_ba.object_a_profile_address.as_ref(),
-//     ],
-//     bump
-// )]
-// pub objects_relation_ba: Account<'info, ObjectsRelation>,
+- Profiles represent any entities including people, organizations, physical and digital assets
+- Attachments are soul-bound tokens that represent meaningful facts associated with profiles or profile relations and may have a link to arbitrary data stored on-chain or off-chain
+- Relations are variable-strength proofs of connection between parties, they are unidirectional, what brings high flexibility and variability
+- Acknowledgements are soul-bound tokens that can be issued based on relations and used to create stronger proof models
