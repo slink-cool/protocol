@@ -5,7 +5,7 @@ const config: Config.InitialOptions = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
-  testTimeout: 60000,
+  testTimeout: 6000000,
   transformIgnorePatterns: ['<rootDir>/node_modules/'],
 };
 export default config;
