@@ -1,8 +1,8 @@
 import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
-import type { Slink } from 'program/idl';
-import { IDL } from 'program/idl';
+import type { Slink } from '../src/program/idl';
+import { IDL } from '../src/program/idl';
 import {
   acknowledgeAttachment,
   createObjectProfile,
@@ -10,8 +10,9 @@ import {
   createObjectRelationAttachment,
   createObjectsRelation,
 } from '../src/program/program-api';
-import { decode, encode, fundKeypair } from '../src/utils/utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
+import { decode, encode } from '../src/utils/string-utils';
+import { fundKeypair } from '../src/utils/solana-utils';
 
 describe('Protocol', () => {
   const provider = AnchorProvider.env();

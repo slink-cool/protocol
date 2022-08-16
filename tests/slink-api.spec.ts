@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import { AnchorProvider, Program, setProvider } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import type { Slink } from 'program/idl';
-import { fundKeypair } from '../src/utils/utils';
+import { fundKeypair } from '../src/utils/solana-utils';
 import { NodeWalletAdapter } from '../src/utils/node-wallet-adapter';
 import { SlinkApi } from '../src/slink/slink-api';
 import { InMemoryAttachmentStorage } from './in-memory-attachement-storage';

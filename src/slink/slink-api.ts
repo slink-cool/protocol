@@ -21,7 +21,7 @@ import {
   findObjectsRelationPda,
   getObjectProfilePda,
 } from '../program/program-api';
-import { decode, encode } from '../utils/utils';
+import { decode, encode } from '../utils/string-utils';
 
 export class SlinkApi {
   constructor(
